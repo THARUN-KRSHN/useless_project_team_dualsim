@@ -16,22 +16,19 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
   const [popTriggered, setPopTriggered] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Guarantee intro appears on page reload and registers replay trigger
   useEffect(() => {
-    // Register global trigger for "Replay Intro"
+    setIsVisible(true);
+    setUseVideo(true);
+
     const handleReplay = () => {
       setPopTriggered(false);
       setUseVideo(true);
       setIsVisible(true);
       if (videoRef.current) {
         videoRef.current.currentTime = 0;
-        videoRef.current.play().catch(() => {
-          if (videoRef.current) {
-            videoRef.current.muted = true;
-            videoRef.current.play().catch(() => setUseVideo(false));
-          } else {
-            setUseVideo(false);
-          }
-        });
+        videoRef.current.muted = true;
+        videoRef.current.play().catch(() => {});
       }
     };
     (window as any).replayIlaPottikalIntro = handleReplay;
@@ -45,18 +42,18 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
   useEffect(() => {
     if (!isVisible) return;
 
-    // Trigger video playback
-    if (useVideo && videoRef.current) {
-      videoRef.current.play().catch((err) => {
-        console.warn('Video autoplay constrained on mobile, attempting muted retry:', err);
-        if (videoRef.current) {
-          videoRef.current.muted = true;
-          videoRef.current.play().catch(() => setUseVideo(false));
-        } else {
-          setUseVideo(false);
-        }
-      });
-    }
+    // Attempt video playback on mount & when video ref becomes available
+    const attemptPlay = () => {
+      if (useVideo && videoRef.current) {
+        videoRef.current.muted = true;
+        videoRef.current.play().catch((err) => {
+          console.warn('Intro video playback waiting for media readiness:', err);
+        });
+      }
+    };
+
+    // Small delay to ensure hydration and DOM readiness on cold reload
+    const playDelayTimer = setTimeout(attemptPlay, 50);
 
     // Synchronize acoustic snap audio effect at the 4.8s crack mark in video (or 500ms for fallback)
     const popTimer = setTimeout(() => {
@@ -64,12 +61,13 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
       playLeafPopSound(1.0);
     }, useVideo ? 4800 : 500);
 
-    // Maximum safety timeout (10.2s max) to guarantee intro never hangs indefinitely
+    // Maximum safety timeout (10.2s max for video, 3.2s for fallback)
     const maxSafetyTimer = setTimeout(() => {
       handleComplete();
     }, useVideo ? 10200 : 3200);
 
     return () => {
+      clearTimeout(playDelayTimer);
       clearTimeout(popTimer);
       clearTimeout(maxSafetyTimer);
     };
@@ -84,7 +82,15 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
     handleComplete();
   };
 
+  const handleVideoCanPlay = () => {
+    if (videoRef.current && videoRef.current.paused) {
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {});
+    }
+  };
+
   const handleVideoError = () => {
+    console.warn('Video file failed to load, falling back to animated scene');
     setUseVideo(false);
   };
 
@@ -98,6 +104,7 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
 
   const handleContainerTouch = () => {
     if (useVideo && videoRef.current && videoRef.current.paused) {
+      videoRef.current.muted = true;
       videoRef.current.play().catch(() => {});
     }
   };
@@ -113,7 +120,7 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
           transition={{ duration: 0.8, ease: 'easeInOut' }}
           onClick={handleContainerTouch}
           onTouchStart={handleContainerTouch}
-          className="fixed inset-0 z-[9999] w-full h-[100dvh] min-h-[100vh] flex items-center justify-center bg-[#f7f8f7] overflow-hidden select-none"
+          className="fixed inset-0 z-[9999] w-full h-[100dvh] min-h-[100vh] flex items-center justify-center bg-[#f4f5f4] overflow-hidden select-none"
         >
           {/* Skip Button */}
           <button
@@ -125,8 +132,8 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
           </button>
 
           {useVideo ? (
-            /* High Definition Rendered Intro Video Scene (Fit to screen without cropping logo on mobile) */
-            <div className="relative w-full h-[100dvh] flex flex-col items-center justify-center bg-[#f7f8f7] overflow-hidden p-2 sm:p-0">
+            /* Perfectly Seamless #f4f5f4 Studio Canvas Video Player for Laptop & Mobile */
+            <div className="relative w-full h-[100dvh] flex items-center justify-center bg-[#f4f5f4] overflow-hidden">
               <video
                 ref={videoRef}
                 src="/intro-video.mp4"
@@ -134,14 +141,16 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
                 playsInline
                 muted
                 preload="auto"
+                onCanPlay={handleVideoCanPlay}
+                onLoadedData={handleVideoCanPlay}
                 onEnded={handleVideoEnded}
                 onError={handleVideoError}
-                className="w-full h-full object-contain max-w-full max-h-full bg-[#f7f8f7]"
+                className="w-full h-full object-contain sm:object-cover scale-[1.22] sm:scale-100 max-w-full max-h-full bg-[#f4f5f4] origin-center transition-transform"
               />
             </div>
           ) : (
             /* Fallback Animated Scene */
-            <div className="relative flex flex-col items-center justify-center px-4 text-center">
+            <div className="relative flex flex-col items-center justify-center px-4 text-center bg-[#f4f5f4]">
               {popTriggered && (
                 <motion.div
                   initial={{ scale: 0.2, opacity: 0.9 }}
