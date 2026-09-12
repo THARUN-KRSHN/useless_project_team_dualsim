@@ -10,11 +10,16 @@ router = APIRouter(prefix="/pops", tags=["Pops"])
 async def upload_pop(
     file: UploadFile = File(...),
     leaf_id: str | None = Form(default=None),
+    source: str = Form(default="uploaded"),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     content = await file.read()
     result = await audio_service.upload_and_score_pop(
-        current_user.id, file.filename, content, leaf_id=leaf_id
+        current_user.id,
+        file.filename,
+        content,
+        leaf_id=leaf_id,
+        source=source,
     )
     return result
 

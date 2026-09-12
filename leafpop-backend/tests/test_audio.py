@@ -63,3 +63,21 @@ async def test_upload_and_score_pop_response():
     assert result["pop_detected"] is True
     assert "message" in result
 
+
+def test_save_pop_attempt_tracks_source_for_leaderboard_filtering():
+    from app.db import queries
+
+    record = queries.save_pop_attempt(
+        user_id="user-source-test",
+        leaf_id=None,
+        audio_url="https://example.com/recorded.mp3",
+        audio_features={"audio_duration": 1.2},
+        score_breakdown={"final_score": 88},
+        audio_hash="hash-source-test",
+        source="recorded",
+    )
+
+    rows = queries.fetch_leaderboard_rows("real", limit=10, source="recorded")
+    assert any(r["user_id"] == "user-source-test" and r.get("source") == "recorded" for r in rows)
+    assert record["source"] == "recorded"
+

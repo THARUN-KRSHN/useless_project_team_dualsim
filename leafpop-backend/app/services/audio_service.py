@@ -34,7 +34,8 @@ def _check_rate_limit(user_id: str) -> None:
 
 
 async def upload_and_score_pop(user_id: str, filename: str, content: bytes,
-                                leaf_id: str | None = None) -> dict:
+                                leaf_id: str | None = None,
+                                source: str = "uploaded") -> dict:
     validate_audio_upload(filename, content)
     _check_rate_limit(user_id)
 
@@ -78,6 +79,7 @@ async def upload_and_score_pop(user_id: str, filename: str, content: bytes,
         audio_features=features.to_dict(),
         score_breakdown=score_breakdown,
         audio_hash=audio_hash,
+        source=source,
     )
     queries.update_profile_stats(user_id, score_breakdown["final_score"])
 

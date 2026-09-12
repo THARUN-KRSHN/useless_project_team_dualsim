@@ -11,11 +11,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Medal, Award, RefreshCw, Volume2, Sparkles, Layers } from 'lucide-react';
 
 type LeaderboardMode = 'all' | 'real' | 'virtual';
+type LeaderboardSource = 'all' | 'uploaded' | 'recorded';
 
 const TABS: { label: string; value: LeaderboardMode; icon: React.ReactNode; pill: string }[] = [
   { label: 'All Time', value: 'all', icon: <Layers size={14} />, pill: 'Overall' },
   { label: 'Real Pop', value: 'real', icon: <Volume2 size={14} />, pill: 'Microphone' },
   { label: 'Virtual', value: 'virtual', icon: <Sparkles size={14} />, pill: 'Game' },
+];
+
+const REAL_SOURCE_TABS: { label: string; value: LeaderboardSource }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Uploaded', value: 'uploaded' },
+  { label: 'Recorded', value: 'recorded' },
 ];
 
 function getRankIcon(rank: number) {
@@ -39,16 +46,17 @@ function getScoreGradient(score: number) {
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const [mode, setMode] = useState<LeaderboardMode>('all');
+  const [source, setSource] = useState<LeaderboardSource>('all');
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchLeaderboard = async (m: LeaderboardMode) => {
+  const fetchLeaderboard = async (m: LeaderboardMode, s: LeaderboardSource = 'all') => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getLeaderboard(m, 25);
+      const data = await getLeaderboard(m, 25, s);
       setEntries(data);
       setLastUpdated(new Date());
     } catch (err: any) {
@@ -59,8 +67,8 @@ export default function LeaderboardPage() {
   };
 
   useEffect(() => {
-    fetchLeaderboard(mode);
-  }, [mode]);
+    fetchLeaderboard(mode, mode === 'real' ? source : 'all');
+  }, [mode, source]);
 
   const myEntry = user ? entries.find((e) => e.username === user.username) : null;
 
@@ -71,7 +79,7 @@ export default function LeaderboardPage() {
       description="Live global rankings. Every real pop and virtual crack updates your position immediately."
       action={
         <button
-          onClick={() => { void fetchLeaderboard(mode); }}
+          onClick={() => { void fetchLeaderboard(mode, mode === 'real' ? source : 'all'); }}
           disabled={loading}
           className="flex items-center gap-2 text-xs font-bold text-forest-muted hover:text-primary-600 transition-colors disabled:opacity-50"
           id="refresh-leaderboard-btn"
@@ -82,22 +90,42 @@ export default function LeaderboardPage() {
       }
     >
       {/* Mode Tabs */}
-      <div className="flex gap-2 mb-6 p-1 bg-surface-muted rounded-full w-fit">
-        {TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setMode(tab.value)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 ${
-              mode === tab.value
-                ? 'bg-white text-forest shadow-soft'
-                : 'text-forest-muted hover:text-forest'
-            }`}
-            id={`leaderboard-tab-${tab.value}`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex gap-2 p-1 bg-surface-muted rounded-full w-fit">
+          {TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setMode(tab.value)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 ${
+                mode === tab.value
+                  ? 'bg-white text-forest shadow-soft'
+                  : 'text-forest-muted hover:text-forest'
+              }`}
+              id={`leaderboard-tab-${tab.value}`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'real' && (
+          <div className="flex gap-2 flex-wrap">
+            {REAL_SOURCE_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setSource(tab.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  source === tab.value
+                    ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                    : 'bg-white text-forest-muted border border-border hover:text-forest'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* My Rank Banner (if found on board) */}
@@ -285,12 +313,16 @@ export default function LeaderboardPage() {
                       </div>
                     </div>
 
-                    {/* Total Pops */}
+                    {/* Total Pops / Playback */}
                     <div className="col-span-3 sm:col-span-4 text-center">
-                      <span className="text-sm font-semibold text-forest-muted">
-                        {entry.total_pops}
-                        <span className="text-xs font-normal ml-1 hidden sm:inline">pops</span>
-                      </span>
+                      {entry.audio_url ? (
+                        <audio controls src={entry.audio_url} className="w-full max-w-[140px] h-8 mx-auto" />
+                      ) : (
+                        <span className="text-sm font-semibold text-forest-muted">
+                          {entry.total_pops}
+                          <span className="text-xs font-normal ml-1 hidden sm:inline">pops</span>
+                        </span>
+                      )}
                     </div>
                   </motion.div>
                 );

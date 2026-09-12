@@ -47,7 +47,7 @@ export const LeaderboardPreview: React.FC = () => {
           <div className="space-y-3">
             {entries.map((entry, idx) => (
               <div
-                key={entry.user_id + idx}
+                key={entry.user_id ?? `${entry.username}-${idx}`}
                 className="flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-surface-muted/60 hover:bg-surface-accent/60 transition-colors"
               >
                 <div className="flex items-center gap-4">

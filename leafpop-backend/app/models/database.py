@@ -38,7 +38,7 @@ SQL to create these tables in the Supabase SQL editor:
         id uuid primary key,
         user_id uuid references profiles(id),
         leaf_id uuid references leaves(id),
-        audio_url text, audio_hash text,
+        audio_url text, audio_hash text, source text default 'uploaded',
         audio_duration float, peak_amplitude float, rms_energy float,
         peak_frequency float, attack_time float, pop_duration float,
         noise_level float, signal_to_noise float,

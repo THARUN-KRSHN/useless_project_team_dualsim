@@ -98,12 +98,13 @@ export async function getLeafReport(leafId: string): Promise<LeafReportResponse>
   return data;
 }
 
-export async function uploadPopAudio(file: File, leafId?: string | null, token?: string | null): Promise<PopUploadResponse> {
+export async function uploadPopAudio(file: File, leafId?: string | null, token?: string | null, source: 'uploaded' | 'recorded' = 'uploaded'): Promise<PopUploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
   if (leafId) {
     formData.append('leaf_id', leafId);
   }
+  formData.append('source', source);
 
   const res = await fetch(`${BASE_URL}/pops/upload`, {
     method: 'POST',
@@ -144,8 +145,9 @@ export async function submitVirtualPop(payload: VirtualPopRequest, token?: strin
   return data;
 }
 
-export async function getLeaderboard(mode: 'all' | 'real' | 'virtual' = 'all', limit = 20): Promise<LeaderboardEntry[]> {
-  const res = await fetch(`${BASE_URL}/leaderboard?mode=${mode}&limit=${limit}`, {
+export async function getLeaderboard(mode: 'all' | 'real' | 'virtual' = 'all', limit = 20, source: 'all' | 'uploaded' | 'recorded' = 'all'): Promise<LeaderboardEntry[]> {
+  const sourceQuery = source === 'all' ? '' : `&source=${source}`;
+  const res = await fetch(`${BASE_URL}/leaderboard?mode=${mode}&limit=${limit}${sourceQuery}`, {
     cache: 'no-store',
   });
 

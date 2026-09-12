@@ -84,9 +84,12 @@ export interface LeaderboardEntry {
   rank: number;
   user_id: string;
   username: string;
+  score?: number;
   best_score: number;
   total_pops: number;
   mode: 'all' | 'real' | 'virtual';
+  source?: 'uploaded' | 'recorded' | 'virtual';
+  audio_url?: string | null;
   updated_at?: string;
 }
 

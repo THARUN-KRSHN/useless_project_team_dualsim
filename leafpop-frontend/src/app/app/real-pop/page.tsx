@@ -63,7 +63,12 @@ export default function RealPopPage() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : 'audio/mp4';
+      const mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -75,8 +80,10 @@ export default function RealPopPage() {
 
       mediaRecorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const file = new File([audioBlob], `mic_pop_${Date.now()}.wav`, { type: 'audio/wav' });
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : mimeType.includes('wav') ? 'wav' : 'webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const file = new File([audioBlob], `mic_pop_${Date.now()}.${ext}`, { type: mimeType });
         setSelectedFile(file);
         setAudioPreviewUrl(URL.createObjectURL(file));
         setFlowState('recorded');
@@ -127,7 +134,7 @@ export default function RealPopPage() {
     setErrorMessage(null);
 
     try {
-      const res = await uploadPopAudio(selectedFile, linkedLeafId, token);
+      const res = await uploadPopAudio(selectedFile, linkedLeafId, token, 'recorded');
       setPopResult(res);
       setFlowState('result');
     } catch (err: any) {

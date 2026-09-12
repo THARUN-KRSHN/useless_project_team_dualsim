@@ -259,13 +259,14 @@ def get_latest_analysis_for_leaf(leaf_id: str) -> dict | None:
 
 def save_pop_attempt(user_id: str, leaf_id: str | None, audio_url: str,
                       audio_features: dict, score_breakdown: dict,
-                      audio_hash: str) -> dict:
+                      audio_hash: str, source: str = "uploaded") -> dict:
     record = {
         "id": _new_id(),
         "user_id": user_id,
         "leaf_id": leaf_id,
         "audio_url": audio_url,
         "audio_hash": audio_hash,
+        "source": source if source in {"uploaded", "recorded"} else "uploaded",
         "audio_duration": audio_features.get("audio_duration"),
         "peak_amplitude": audio_features.get("peak_amplitude"),
         "rms_energy": audio_features.get("rms_energy"),
@@ -467,27 +468,48 @@ def count_recent_virtual_attempts(user_id: str, since_iso: str) -> int:
 # Leaderboard
 # ---------------------------------------------------------------------------
 
-def fetch_leaderboard_rows(mode: str, limit: int = 10) -> list[dict]:
-    """mode: 'real' | 'virtual' | 'all'"""
+def fetch_leaderboard_rows(mode: str, limit: int = 10, source: str | None = None) -> list[dict]:
+    """mode: 'real' | 'virtual' | 'all'; source: 'uploaded' | 'recorded' | None"""
     rows: list[dict] = []
+
+    def _filter_source(row: dict) -> bool:
+        if source in (None, "all"):
+            return True
+        return (row.get("source") or "uploaded") == source
+
     if _is_dev():
         if mode in ("real", "all"):
             for r in _MOCK_DB[TABLE_POP_ATTEMPTS].values():
-                rows.append({"user_id": r["user_id"], "final_score": r["final_score"], "created_at": r["created_at"], "mode": "real"})
+                if not _filter_source(r):
+                    continue
+                rows.append({
+                    "user_id": r["user_id"],
+                    "final_score": r["final_score"],
+                    "created_at": r["created_at"],
+                    "audio_url": r.get("audio_url"),
+                    "source": r.get("source", "uploaded"),
+                    "mode": "real",
+                })
         if mode in ("virtual", "all"):
             for r in _MOCK_DB[TABLE_VIRTUAL_ATTEMPTS].values():
-                rows.append({"user_id": r["user_id"], "final_score": r["final_score"], "created_at": r["created_at"], "mode": "virtual"})
+                rows.append({
+                    "user_id": r["user_id"],
+                    "final_score": r["final_score"],
+                    "created_at": r["created_at"],
+                    "audio_url": None,
+                    "source": "virtual",
+                    "mode": "virtual",
+                })
         rows.sort(key=lambda r: r.get("final_score", 0), reverse=True)
         return rows[:limit]
 
     try:
         client = get_supabase()
         if mode in ("real", "all"):
-            real = (
-                client.table(TABLE_POP_ATTEMPTS)
-                .select("user_id, final_score, created_at")
-                .order("final_score", desc=True).limit(limit).execute()
-            )
+            real_query = client.table(TABLE_POP_ATTEMPTS).select("user_id, final_score, created_at, audio_url, source")
+            if source not in (None, "all"):
+                real_query = real_query.eq("source", source)
+            real = real_query.order("final_score", desc=True).limit(limit).execute()
             for r in real.data or []:
                 rows.append({**r, "mode": "real"})
 
@@ -498,7 +520,7 @@ def fetch_leaderboard_rows(mode: str, limit: int = 10) -> list[dict]:
                 .order("final_score", desc=True).limit(limit).execute()
             )
             for r in virtual.data or []:
-                rows.append({**r, "mode": "virtual"})
+                rows.append({**r, "audio_url": None, "source": "virtual", "mode": "virtual"})
 
         rows.sort(key=lambda r: r.get("final_score", 0), reverse=True)
         return rows[:limit]
@@ -506,10 +528,26 @@ def fetch_leaderboard_rows(mode: str, limit: int = 10) -> list[dict]:
         if _is_dev():
             if mode in ("real", "all"):
                 for r in _MOCK_DB[TABLE_POP_ATTEMPTS].values():
-                    rows.append({"user_id": r["user_id"], "final_score": r["final_score"], "created_at": r["created_at"], "mode": "real"})
+                    if not _filter_source(r):
+                        continue
+                    rows.append({
+                        "user_id": r["user_id"],
+                        "final_score": r["final_score"],
+                        "created_at": r["created_at"],
+                        "audio_url": r.get("audio_url"),
+                        "source": r.get("source", "uploaded"),
+                        "mode": "real",
+                    })
             if mode in ("virtual", "all"):
                 for r in _MOCK_DB[TABLE_VIRTUAL_ATTEMPTS].values():
-                    rows.append({"user_id": r["user_id"], "final_score": r["final_score"], "created_at": r["created_at"], "mode": "virtual"})
+                    rows.append({
+                        "user_id": r["user_id"],
+                        "final_score": r["final_score"],
+                        "created_at": r["created_at"],
+                        "audio_url": None,
+                        "source": "virtual",
+                        "mode": "virtual",
+                    })
             rows.sort(key=lambda r: r.get("final_score", 0), reverse=True)
             return rows[:limit]
         raise DatabaseError(f"Failed to build leaderboard: {exc}") from exc
