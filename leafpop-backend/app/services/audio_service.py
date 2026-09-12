@@ -40,8 +40,25 @@ async def upload_and_score_pop(user_id: str, filename: str, content: bytes,
     _check_rate_limit(user_id)
 
     audio_hash = sha256_of_bytes(content)
-    if queries.find_pop_attempt_by_hash(audio_hash):
-        raise DuplicateSubmissionError("This recording has already been submitted.")
+    existing_ref = queries.find_pop_attempt_by_hash(audio_hash)
+    if existing_ref:
+        logger.info("Duplicate audio hash, returning previous result for user_id=%s", user_id)
+        # Fetch the full record if possible
+        existing = queries.get_pop_attempt(existing_ref["id"]) or existing_ref
+        score_bd = existing.get("score_breakdown", {})
+        return {
+            "pop_id": existing.get("id", existing_ref["id"]),
+            "id": existing.get("id", existing_ref["id"]),
+            "score": score_bd,
+            "result": score_bd,
+            "final_score": score_bd.get("final_score", 75),
+            "audio_features": existing.get("audio_features", {}),
+            "pop_detected": True,
+            "message": score_bd.get("message", "Pop already recorded."),
+            "prediction_comparison": None,
+            "ai_engine": "Cached Result",
+        }
+
 
     logger.info("Pop audio received: user_id=%s leaf_id=%s", user_id, leaf_id)
 

@@ -14,12 +14,22 @@ from app.config.settings import get_settings
 logger = logging.getLogger("leafpop.gemini_service")
 
 # Priority list of Gemini models to attempt (with auto-fallback if rate-limited)
-GEMINI_MODELS = [
-    "gemini-3.6-flash",
-    "gemini-2.0-flash-exp",
-    "gemini-1.5-flash-8b",
-    "gemini-1.5-pro",
+# Vision models (for leaf image analysis)
+GEMINI_VISION_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
 ]
+
+# Audio models (for pop sound analysis) - subset that support audio input
+GEMINI_AUDIO_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+]
+
+# Legacy alias for backward compat
+GEMINI_MODELS = GEMINI_VISION_MODELS
 
 
 def get_gemini_client() -> Optional[genai.Client]:
@@ -83,7 +93,7 @@ async def analyze_leaf_image_with_gemini(image_bytes: bytes) -> Optional[dict[st
         "}"
     )
 
-    for model in GEMINI_MODELS:
+    for model in GEMINI_VISION_MODELS:
         try:
             response = client.models.generate_content(
                 model=model,
@@ -157,7 +167,7 @@ async def analyze_pop_audio_with_gemini(audio_bytes: bytes, mime_type: str = "au
         "}"
     )
 
-    for model in GEMINI_MODELS:
+    for model in GEMINI_AUDIO_MODELS:
         try:
             response = client.models.generate_content(
                 model=model,

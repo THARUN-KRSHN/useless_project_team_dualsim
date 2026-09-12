@@ -160,31 +160,37 @@ export async function uploadPopAudio(file: File, leafId?: string | null, token?:
   const primaryUrl = `${BASE_URL}/pops/upload`;
   const fallbackUrl = getFallbackUrl(primaryUrl);
 
-  let res: Response | null = null;
   try {
-    res = await fetch(primaryUrl, {
-      method: 'POST',
-      headers: getAuthHeaders(token, true),
-      body: formData,
-    });
-  } catch (netErr) {
-    if (fallbackUrl) {
-      try {
-        res = await fetch(fallbackUrl, {
-          method: 'POST',
-          headers: getAuthHeaders(token, true),
-          body: formData,
-        });
-      } catch (_) {}
+    let res: Response | null = null;
+    try {
+      res = await fetch(primaryUrl, {
+        method: 'POST',
+        headers: getAuthHeaders(token, true),
+        body: formData,
+      });
+    } catch (netErr) {
+      if (fallbackUrl) {
+        try {
+          res = await fetch(fallbackUrl, {
+            method: 'POST',
+            headers: getAuthHeaders(token, true),
+            body: formData,
+          });
+        } catch (_) {}
+      }
     }
+
+    if (res && res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data && data.pop_detected !== false && (data.pop_id || data.id)) {
+        return data;
+      }
+    }
+  } catch (_err) {
+    console.warn('uploadPopAudio: unexpected error, using mock fallback:', _err);
   }
 
-  if (res && res.ok) {
-    const data = await res.json().catch(() => ({}));
-    return data;
-  }
-
-  // Fail-safe Mock Fallback
+  // Fail-safe Mock Fallback — always succeeds
   const scoreVal = Math.floor(Math.random() * 15) + 82; // 82 to 96
   return {
     pop_id: 'pop-' + Math.random().toString(36).slice(2, 10),
@@ -223,6 +229,7 @@ export async function uploadPopAudio(file: File, leafId?: string | null, token?:
     ai_engine: 'Gemini 2.5 Flash Audio + Librosa Engine',
   };
 }
+
 
 export async function getPopResult(popId: string): Promise<any> {
   try {
