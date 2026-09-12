@@ -19,6 +19,7 @@ export interface LeafAnalysis {
 export interface LeafUploadResponse {
   leaf_id: string;
   image_url: string;
+  created_at?: string;
 }
 
 export interface LeafReportResponse {
@@ -40,7 +41,7 @@ export interface AudioScoreBreakdown {
   clarity: number;
   impact: number;
   final_score: number;
-  message: string;
+  message?: string;
 }
 
 export interface AudioPhysicsFeatures {
@@ -48,6 +49,7 @@ export interface AudioPhysicsFeatures {
   peak_amplitude?: number;
   rms_energy?: number;
   peak_frequency?: number;
+  spectral_centroid?: number;
   attack_time?: number;
   pop_duration?: number;
   noise_level?: number;
@@ -58,7 +60,7 @@ export interface PredictionComparison {
   predicted: number;
   actual: number;
   diff: number;
-  percentage_error: number;
+  percentage_error?: number;
 }
 
 export interface PopUploadResponse {
@@ -71,6 +73,7 @@ export interface PopUploadResponse {
   pop_detected?: boolean;
   message: string;
   prediction_comparison?: PredictionComparison | null;
+  ai_engine?: string;
 }
 
 export interface VirtualPopRequest {
@@ -80,34 +83,45 @@ export interface VirtualPopRequest {
   duration_ms: number;
   reaction_time_ms: number;
   leaf_id?: string | null;
+  combo?: number;
 }
 
 export interface VirtualPopResponse {
+  attempt_id?: string;
   score: number;
-  impact: number;
-  pop_strength: number;
+  impact?: number;
+  pop_strength?: number;
+  rank?: string;
   message: string;
+  combo_bonus?: number;
 }
 
 export interface LeaderboardEntry {
   rank: number;
   user_id: string;
   username: string;
-  score?: number;
+  avatar_url?: string;
+  score: number;
   best_score: number;
-  total_pops: number;
-  mode: 'all' | 'real' | 'virtual';
-  source?: 'uploaded' | 'recorded' | 'virtual';
+  total_pops?: number;
+  mode?: 'all' | 'real' | 'virtual';
+  source?: 'all' | 'uploaded' | 'recorded' | 'virtual';
   audio_url?: string | null;
+  created_at?: string;
   updated_at?: string;
 }
 
 export interface UserStats {
   user_id: string;
-  username: string;
-  best_score: number;
-  total_pops: number;
-  average_score: number;
+  username?: string;
+  total_pops?: number;
+  highest_pop_score?: number;
+  average_pop_score?: number;
+  total_virtual_pops?: number;
+  highest_virtual_score?: number;
+  rank_title?: string;
+  best_score?: number;
+  average_score?: number;
   rank?: number;
   leaves_analyzed?: number;
 }
@@ -115,9 +129,12 @@ export interface UserStats {
 export interface PopHistoryItem {
   id: string;
   score: number;
-  created_at: string;
+  created_at?: string;
+  date?: string;
+  leaf_name?: string;
   audio_url?: string;
   mode?: string;
+  image_url?: string;
 }
 
 export interface UserProfile {

@@ -303,7 +303,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="col-span-4">
                         <span className="text-xs text-forest-subtle">
-                          {formatDate(pop.created_at)}
+                          {formatDate(pop.created_at || pop.date || '')}
                         </span>
                       </div>
                     </motion.div>

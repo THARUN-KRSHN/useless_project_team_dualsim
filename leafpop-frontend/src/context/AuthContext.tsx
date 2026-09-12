@@ -129,23 +129,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password: pass,
-    });
-
-    if (error) throw error;
-    if (data.session) {
-      setToken(data.session.access_token);
-      localStorage.setItem('leafpop_token', data.session.access_token);
-      localStorage.removeItem('leafpop_demo_mode');
-      setSessionCookie();
-      setUser({
-        id: data.user.id,
-        email: data.user.email || '',
-        username: data.user.user_metadata?.username || email.split('@')[0],
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: pass,
       });
-      setIsDemoUser(false);
+
+      if (error) throw error;
+      if (data.session) {
+        setToken(data.session.access_token);
+        localStorage.setItem('leafpop_token', data.session.access_token);
+        localStorage.removeItem('leafpop_demo_mode');
+        setSessionCookie();
+        setUser({
+          id: data.user.id,
+          email: data.user.email || '',
+          username: data.user.user_metadata?.username || email.split('@')[0],
+        });
+        setIsDemoUser(false);
+      }
+    } catch (_) {
+      // Fallback to Demo Mode on any auth error so user is never blocked
+      const userHandle = email.split('@')[0] || 'LeafPopper';
+      setUser({
+        id: 'demo-user-123',
+        email: email || 'demo@leafpop.ai',
+        username: userHandle,
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=60',
+      });
+      setToken('demo-token');
+      setIsDemoUser(true);
+      setSessionCookie();
+      localStorage.setItem('leafpop_demo_mode', 'true');
+      localStorage.setItem('leafpop_token', 'demo-token');
     }
   };
 
@@ -155,25 +171,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: pass,
-      options: {
-        data: { username },
-      },
-    });
-
-    if (error) throw error;
-    if (data.session && data.user) {
-      setToken(data.session.access_token);
-      localStorage.setItem('leafpop_token', data.session.access_token);
-      setSessionCookie();
-      setUser({
-        id: data.user.id,
-        email: data.user.email || '',
-        username,
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: {
+          data: { username },
+        },
       });
-      setIsDemoUser(false);
+
+      if (error) throw error;
+      if (data.session && data.user) {
+        setToken(data.session.access_token);
+        localStorage.setItem('leafpop_token', data.session.access_token);
+        setSessionCookie();
+        setUser({
+          id: data.user.id,
+          email: data.user.email || '',
+          username,
+        });
+        setIsDemoUser(false);
+      } else {
+        // Fallback for signups requiring email confirmation
+        enterDemoMode();
+      }
+    } catch (_) {
+      // Fallback to Demo Mode on any signup error
+      setUser({
+        id: 'demo-user-123',
+        email: email || 'demo@leafpop.ai',
+        username: username || 'LeafPopper',
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=60',
+      });
+      setToken('demo-token');
+      setIsDemoUser(true);
+      setSessionCookie();
+      localStorage.setItem('leafpop_demo_mode', 'true');
+      localStorage.setItem('leafpop_token', 'demo-token');
     }
   };
 

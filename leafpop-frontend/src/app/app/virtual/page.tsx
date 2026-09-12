@@ -402,7 +402,7 @@ export default function VirtualPopPage() {
                         Pop Strength
                       </span>
                       <span className="text-xl font-black text-primary-600">
-                        {result.pop_strength.toFixed(2)}
+                        {(result.pop_strength || result.score || 0).toFixed(2)}
                       </span>
                     </div>
                   </div>
