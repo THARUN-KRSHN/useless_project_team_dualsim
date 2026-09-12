@@ -110,23 +110,64 @@ export function encodeWav(audioBuffer: AudioBuffer): Blob {
 }
 
 export async function convertBlobToWav(blob: Blob): Promise<File> {
-  if (blob.type.includes('wav')) {
-    return new File([blob], `recording.wav`, { type: 'audio/wav' });
+  // If it's already a WAV file with valid type, return structured File
+  if (blob.type.includes('wav') && blob instanceof File) {
+    return blob;
   }
 
   const arrayBuffer = await blob.arrayBuffer();
   const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
   if (!AudioCtx) {
-    return new File([blob], `recording.webm`, { type: blob.type || 'audio/webm' });
+    const ext = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('mpeg') || blob.type.includes('mp3') ? 'mp3' : 'webm';
+    return new File([blob], `recording.${ext}`, { type: blob.type || `audio/${ext}` });
   }
 
   const audioContext = new AudioCtx();
   try {
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+
+    const audioBuffer = await new Promise<AudioBuffer>((resolve, reject) => {
+      let isResolved = false;
+      const safeResolve = (buf: AudioBuffer) => {
+        if (!isResolved) {
+          isResolved = true;
+          resolve(buf);
+        }
+      };
+      const safeReject = (err: any) => {
+        if (!isResolved) {
+          isResolved = true;
+          reject(err);
+        }
+      };
+
+      const res = audioContext.decodeAudioData(
+        arrayBuffer.slice(0),
+        safeResolve,
+        safeReject
+      );
+      if (res && typeof (res as any).then === 'function') {
+        (res as any).then(safeResolve).catch(safeReject);
+      }
+    });
+
     const wavBlob = encodeWav(audioBuffer);
-    return new File([wavBlob], `recording.wav`, { type: 'audio/wav' });
+    let baseName = 'recorded_pop';
+    if (blob instanceof File && blob.name) {
+      baseName = blob.name.replace(/\.[^/.]+$/, '');
+    }
+    return new File([wavBlob], `${baseName}.wav`, { type: 'audio/wav' });
+  } catch (decodeErr) {
+    console.warn('WAV conversion failed, using original recorded audio blob:', decodeErr);
+    const ext = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('mpeg') || blob.type.includes('mp3') ? 'mp3' : 'webm';
+    const fileName = blob instanceof File ? blob.name : `recorded_pop.${ext}`;
+    return new File([blob], fileName, { type: blob.type || `audio/${ext}` });
   } finally {
-    await audioContext.close();
+    try {
+      await audioContext.close();
+    } catch (_) {}
   }
 }
 

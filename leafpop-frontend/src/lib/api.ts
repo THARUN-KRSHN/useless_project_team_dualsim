@@ -12,6 +12,12 @@ import {
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+function getFallbackUrl(url: string): string | null {
+  if (url.includes(':8000/')) return url.replace(':8000/', ':8001/');
+  if (url.includes(':8001/')) return url.replace(':8001/', ':8000/');
+  return null;
+}
+
 function getErrorMessage(payload: any, fallback: string): string {
   if (!payload) return fallback;
 
@@ -106,18 +112,38 @@ export async function uploadPopAudio(file: File, leafId?: string | null, token?:
   }
   formData.append('source', source);
 
-  const res = await fetch(`${BASE_URL}/pops/upload`, {
-    method: 'POST',
-    headers: getAuthHeaders(token, true),
-    body: formData,
-  });
+  const primaryUrl = `${BASE_URL}/pops/upload`;
+  const fallbackUrl = getFallbackUrl(primaryUrl);
 
-  const data = await res.json();
-  if (!res.ok) {
-    if (res.status === 422 && data.error?.code === 'POP_NOT_DETECTED') {
-      throw new Error("We heard something... but not enough of a pop.");
+  let res: Response;
+  try {
+    res = await fetch(primaryUrl, {
+      method: 'POST',
+      headers: getAuthHeaders(token, true),
+      body: formData,
+    });
+  } catch (netErr) {
+    if (fallbackUrl) {
+      try {
+        res = await fetch(fallbackUrl, {
+          method: 'POST',
+          headers: getAuthHeaders(token, true),
+          body: formData,
+        });
+      } catch (_) {
+        throw new Error("Could not connect to backend server on port 8000 or 8001. Please check server status.");
+      }
+    } else {
+      throw new Error("Could not connect to backend server. Please verify your connection.");
     }
-    throw new Error(data.error?.message || data.detail || "We couldn't find a clean pop in that recording.");
+  }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 422 && (data.error?.code === 'POP_NOT_DETECTED' || data.detail?.includes('pop'))) {
+      throw new Error(data.error?.message || data.detail || "We heard something... but not enough of a pop.");
+    }
+    throw new Error(getErrorMessage(data, "We couldn't find a clean pop in that recording."));
   }
   return data;
 }

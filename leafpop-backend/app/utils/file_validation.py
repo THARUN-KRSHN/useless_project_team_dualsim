@@ -54,7 +54,7 @@ def validate_audio_upload(filename: str, content: bytes) -> None:
 
     ext = _extension_of(filename)
     if ext not in ALLOWED_AUDIO_EXTENSIONS:
-        raise InvalidAudioError("Only WAV, MP3, WEBM and M4A audio files are supported.")
+        raise InvalidAudioError("Unsupported audio file format. Please upload WAV, MP3, WEBM, M4A, OGG or FLAC.")
 
     # Deeper validation (duration, decodability) happens once librosa loads the
     # waveform in audio_service — decoding here too would mean loading it twice.

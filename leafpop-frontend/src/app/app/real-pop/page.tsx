@@ -111,11 +111,19 @@ export default function RealPopPage() {
     }
   };
 
-  const handleFileUpload = (file: File) => {
-    setSelectedFile(file);
-    setAudioPreviewUrl(URL.createObjectURL(file));
-    setFlowState('recorded');
-    setErrorMessage(null);
+  const handleFileUpload = async (file: File) => {
+    try {
+      const wavFile = await convertBlobToWav(file);
+      setSelectedFile(wavFile);
+      setAudioPreviewUrl(URL.createObjectURL(wavFile));
+      setFlowState('recorded');
+      setErrorMessage(null);
+    } catch (_) {
+      setSelectedFile(file);
+      setAudioPreviewUrl(URL.createObjectURL(file));
+      setFlowState('recorded');
+      setErrorMessage(null);
+    }
   };
 
   const handleSyntheticPop = (type: 'loud' | 'medium' | 'soft') => {

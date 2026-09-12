@@ -72,12 +72,29 @@ async def upload_and_score_pop(user_id: str, filename: str, content: bytes,
     score_breakdown = score_real_pop(features)
     logger.info("Score calculated: user_id=%s final_score=%s", user_id, score_breakdown["final_score"])
 
-    # Enhance audio analysis using Google Gemini AI Audio model
+    # Integrate Gemini Multimodal Audio Analysis
     from app.services.gemini_service import analyze_pop_audio_with_gemini
-    gemini_audio_data = await analyze_pop_audio_with_gemini(content, content_type)
-    if gemini_audio_data:
-        if gemini_audio_data.get("message"):
-            score_breakdown["message"] = str(gemini_audio_data["message"])
+    gemini_analysis = await analyze_pop_audio_with_gemini(content, mime_type=content_type)
+
+    ai_engine = "Librosa Spectral Fourier Engine"
+    if gemini_analysis:
+        ai_model = gemini_analysis.get("_model", "Gemini Audio")
+        ai_engine = f"Gemini ({ai_model}) + Librosa Spectral Processing"
+        if gemini_analysis.get("commentary"):
+            score_breakdown["message"] = gemini_analysis["commentary"]
+        if gemini_analysis.get("overall_score") is not None:
+            gemini_score = float(gemini_analysis["overall_score"])
+            # Blend 50% Gemini AI evaluation + 50% Librosa physical acoustics
+            blended_score = round(0.5 * score_breakdown["final_score"] + 0.5 * gemini_score, 1)
+            score_breakdown["final_score"] = blended_score
+            if gemini_analysis.get("loudness_score") is not None:
+                score_breakdown["loudness"] = round(0.5 * score_breakdown["loudness"] + 0.5 * gemini_analysis["loudness_score"], 1)
+            if gemini_analysis.get("sharpness_score") is not None:
+                score_breakdown["sharpness"] = round(0.5 * score_breakdown["sharpness"] + 0.5 * gemini_analysis["sharpness_score"], 1)
+            if gemini_analysis.get("clarity_score") is not None:
+                score_breakdown["clarity"] = round(0.5 * score_breakdown["clarity"] + 0.5 * gemini_analysis["clarity_score"], 1)
+            if gemini_analysis.get("impact_score") is not None:
+                score_breakdown["impact"] = round(0.5 * score_breakdown["impact"] + 0.5 * gemini_analysis["impact_score"], 1)
 
     saved = queries.save_pop_attempt(
         user_id=user_id,
@@ -117,7 +134,7 @@ async def upload_and_score_pop(user_id: str, filename: str, content: bytes,
         "pop_detected": True,
         "message": score_breakdown["message"],
         "prediction_comparison": comparison,
-        "ai_engine": "Gemini 2.5 Flash Audio" if gemini_audio_data else "Librosa Spectral Pipeline",
+        "ai_engine": ai_engine,
     }
 
 

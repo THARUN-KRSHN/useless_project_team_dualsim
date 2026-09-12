@@ -33,12 +33,22 @@ class AudioFeatures:
         return asdict(self)
 
 
+def _normalize_signal(samples: np.ndarray) -> np.ndarray:
+    if samples.size == 0:
+        return samples
+    max_amp = float(np.max(np.abs(samples)))
+    # Automatically amplify quiet/low-gain mic recordings to audible peak level
+    if 1e-12 < max_amp < 0.2:
+        return (samples / max_amp) * 0.85
+    return samples
+
+
 def load_waveform(audio_bytes: bytes) -> tuple[np.ndarray, int]:
     """Decode arbitrary supported audio bytes into a mono float waveform."""
     import soundfile as sf
     from scipy.io import wavfile
 
-    # 1. Try soundfile directly
+    # 1. Try soundfile directly (WAV, MP3, OGG, FLAC)
     try:
         data, sr = sf.read(BytesIO(audio_bytes), always_2d=False, dtype="float32")
         if data.ndim > 1:
@@ -48,7 +58,7 @@ def load_waveform(audio_bytes: bytes) -> tuple[np.ndarray, int]:
             sr = TARGET_SR
         if data.size == 0:
             raise PopNotDetectedError("Audio file contains no audio data.")
-        return data, sr
+        return _normalize_signal(data), sr
     except Exception:
         pass
 
@@ -61,6 +71,8 @@ def load_waveform(audio_bytes: bytes) -> tuple[np.ndarray, int]:
             data = data.astype(np.float32) / 2147483648.0
         elif data.dtype == np.uint8:
             data = (data.astype(np.float32) - 128.0) / 128.0
+        elif data.dtype != np.float32:
+            data = data.astype(np.float32)
         if data.ndim > 1:
             data = np.mean(data, axis=1)
         if sr != TARGET_SR:
@@ -68,60 +80,86 @@ def load_waveform(audio_bytes: bytes) -> tuple[np.ndarray, int]:
             sr = TARGET_SR
         if data.size == 0:
             raise PopNotDetectedError("Audio file contains no audio data.")
-        return data, sr
+        return _normalize_signal(data), sr
     except Exception:
         pass
 
-    # 3. Fallback to librosa.load
+    # 3. Try standard Python wave module
+    try:
+        import wave
+        with wave.open(BytesIO(audio_bytes), "rb") as wf:
+            n_channels = wf.getnchannels()
+            sampwidth = wf.getsampwidth()
+            sr = wf.getframerate()
+            frames = wf.readframes(wf.getnframes())
+            if sampwidth == 2:
+                raw_data = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+            elif sampwidth == 4:
+                raw_data = np.frombuffer(frames, dtype=np.int32).astype(np.float32) / 2147483648.0
+            elif sampwidth == 1:
+                raw_data = (np.frombuffer(frames, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
+            else:
+                raw_data = np.frombuffer(frames, dtype=np.float32)
+            if n_channels > 1:
+                raw_data = raw_data.reshape(-1, n_channels).mean(axis=1)
+            if sr != TARGET_SR:
+                raw_data = librosa.resample(raw_data, orig_sr=sr, target_sr=TARGET_SR)
+                sr = TARGET_SR
+            if raw_data.size > 0:
+                return _normalize_signal(raw_data), sr
+    except Exception:
+        pass
+
+    # 4. Fallback to librosa.load
     try:
         samples, sr = librosa.load(BytesIO(audio_bytes), sr=TARGET_SR, mono=True)
     except Exception as exc:  # noqa: BLE001
         raise PopNotDetectedError(
-            f"Could not decode audio file: {exc}. Please upload a standard WAV, MP3, or OGG recording."
+            f"Could not decode audio file: {exc}. Please record or upload a standard WAV, MP3, or OGG audio file."
         ) from exc
 
     if samples.size == 0:
         raise PopNotDetectedError("Audio file contains no audio data.")
-    return samples, sr
+    return _normalize_signal(samples), sr
 
 
 def _estimate_noise_floor(env: np.ndarray, pop_frame: int) -> float:
-    """Average envelope level outside a small window around the pop peak."""
+    """Estimate true background noise floor outside the pop transient window using 25th percentile."""
     if len(env) <= 3:
         return float(np.min(env))
     mask = np.ones(len(env), dtype=bool)
-    lo, hi = max(0, pop_frame - 2), min(len(env), pop_frame + 3)
+    lo, hi = max(0, pop_frame - 8), min(len(env), pop_frame + 12)
     mask[lo:hi] = False
     background = env[mask]
     if background.size == 0:
-        return float(np.min(env))
-    return float(np.mean(background))
+        return float(np.percentile(env, 25))
+    return float(np.percentile(background, 25))
 
 
 def detect_pop_window(samples: np.ndarray, sr: int) -> tuple[int, int]:
     """
     Find the sample-index window containing the loudest transient ("the pop").
-    Simple, robust approach for an MVP: amplitude envelope + peak search,
-    then expand outward while the envelope stays above a decay threshold.
+    Robust approach: amplitude envelope + peak search,
+    expand outward while envelope stays above decay threshold.
     """
     frame_size = 1024
     hop_size = 256
     env = amplitude_envelope(samples, frame_size=frame_size, hop_size=hop_size)
 
-    if env.size == 0 or np.max(env) < 1e-4:
-        raise PopNotDetectedError("No audible pop event found in the recording.")
+    if env.size == 0 or np.max(env) < 1e-6:
+        raise PopNotDetectedError("No audible audio event found in the recording. Make sure your microphone is unmuted.")
 
     peak_frame = int(np.argmax(env))
-    peak_value = env[peak_frame]
+    peak_value = float(env[peak_frame])
     noise_floor = _estimate_noise_floor(env, peak_frame)
 
-    # A "pop" must clearly stand out above the ambient noise floor.
-    if peak_value < max(noise_floor * 3, 0.02):
+    # Detect pop transient if peak stands out from noise floor or has minimal audible energy (> 0.001)
+    if peak_value < 0.001 and peak_value < noise_floor * 1.05:
         raise PopNotDetectedError(
-            "Couldn't detect a clear pop — try recording closer to the leaf with less background noise."
+            "Couldn't detect a clear pop — try recording closer to the leaf or increasing microphone volume."
         )
 
-    threshold = noise_floor + 0.15 * (peak_value - noise_floor)
+    threshold = noise_floor + 0.08 * (peak_value - noise_floor)
 
     start_frame = peak_frame
     while start_frame > 0 and env[start_frame] > threshold:
@@ -131,8 +169,7 @@ def detect_pop_window(samples: np.ndarray, sr: int) -> tuple[int, int]:
     while end_frame < len(env) - 1 and env[end_frame] > threshold:
         end_frame += 1
 
-    # Small padding so we capture the full transient, not just its core.
-    pad_frames = 2
+    pad_frames = 3
     start_frame = max(0, start_frame - pad_frames)
     end_frame = min(len(env) - 1, end_frame + pad_frames)
 
@@ -140,7 +177,8 @@ def detect_pop_window(samples: np.ndarray, sr: int) -> tuple[int, int]:
     end_sample = min(len(samples), end_frame * hop_size + frame_size)
 
     if end_sample <= start_sample:
-        raise PopNotDetectedError("Pop event window could not be isolated.")
+        start_sample = max(0, peak_frame * hop_size - 1024)
+        end_sample = min(len(samples), peak_frame * hop_size + 4096)
 
     return start_sample, end_sample
 

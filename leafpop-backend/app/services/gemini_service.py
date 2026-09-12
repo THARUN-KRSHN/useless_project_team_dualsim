@@ -15,9 +15,10 @@ logger = logging.getLogger("leafpop.gemini_service")
 
 # Priority list of Gemini models to attempt (with auto-fallback if rate-limited)
 GEMINI_MODELS = [
-    "gemini-2.5-flash-lite",
     "gemini-3.6-flash",
-    "gemini-3.7-flash",
+    "gemini-2.0-flash-exp",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
 ]
 
 
@@ -109,25 +110,50 @@ async def analyze_leaf_image_with_gemini(image_bytes: bytes) -> Optional[dict[st
 
 
 async def analyze_pop_audio_with_gemini(audio_bytes: bytes, mime_type: str = "audio/wav") -> Optional[dict[str, Any]]:
-    """Analyzes a leaf pop audio recording using Gemini Audio models to extract unique sound ratings."""
+    """Analyzes a leaf pop audio recording using Gemini Multimodal Audio models."""
     client = get_gemini_client()
     if not client:
         return None
 
-    audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
+    # Standardize MIME type for Gemini
+    if "wav" in mime_type:
+        gemini_mime = "audio/wav"
+    elif "mp3" in mime_type or "mpeg" in mime_type:
+        gemini_mime = "audio/mp3"
+    elif "ogg" in mime_type:
+        gemini_mime = "audio/ogg"
+    elif "flac" in mime_type:
+        gemini_mime = "audio/flac"
+    elif "aac" in mime_type:
+        gemini_mime = "audio/aac"
+    else:
+        gemini_mime = "audio/wav"
+
+    try:
+        audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=gemini_mime)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not create Gemini audio part: %s", exc)
+        return None
 
     prompt = (
-        "You are an expert acoustic physics judge evaluating a real leaf pop audio recording.\n"
-        "Listen to the frequency spectrum, transient attack rate, loudness peak, and snap clarity of this recording.\n"
-        "Calculate dynamic, unique score components specifically reflecting this audio clip.\n\n"
-        "Return ONLY a raw JSON object (no markdown formatting, no code blocks) matching this schema:\n"
+        "You are the Chief Acoustic Scientist at IlaPottikal Leaf Pop Laboratory.\n"
+        "Listen to this recorded audio clip of a physical leaf snap / pop event.\n"
+        "Evaluate the exact physical pop sound heard in the audio:\n"
+        "1. Snap Sharpness: High frequency transient energy, crispness, and sudden attack.\n"
+        "2. Crack Loudness: Volume and energy burst compared to background ambient noise.\n"
+        "3. Acoustic Clarity: Clean pop sound without rustling, echo, or muffled background noise.\n"
+        "4. Impact Energy: Physical force and pop resonance.\n\n"
+        "Return ONLY a raw JSON object (no markdown formatting, no code blocks) matching this exact schema:\n"
         "{\n"
-        '  "loudness": <integer 10 to 99>,\n'
-        '  "sharpness": <integer 10 to 99>,\n'
-        '  "clarity": <integer 10 to 99>,\n'
-        '  "impact": <integer 10 to 99>,\n'
-        '  "final_score": <integer 10 to 99>,\n'
-        '  "message": "<1-sentence scientific and entertaining commentary describing this specific pop burst>"\n'
+        '  "pop_detected": true,\n'
+        '  "pop_quality": "explosive" | "crisp" | "moderate" | "soft" | "muffled",\n'
+        '  "loudness_score": <integer 0 to 100>,\n'
+        '  "sharpness_score": <integer 0 to 100>,\n'
+        '  "clarity_score": <integer 0 to 100>,\n'
+        '  "impact_score": <integer 0 to 100>,\n'
+        '  "overall_score": <integer 0 to 100>,\n'
+        '  "commentary": "<1-2 sentence witty, expert acoustic verdict about this leaf pop sound>",\n'
+        '  "confidence": <float 0.85 to 0.99>\n'
         "}"
     )
 
@@ -138,14 +164,15 @@ async def analyze_pop_audio_with_gemini(audio_bytes: bytes, mime_type: str = "au
                 contents=[audio_part, prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    temperature=0.5,
+                    temperature=0.4,
                 ),
             )
 
             if response and response.text:
                 clean_text = response.text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
                 data = json.loads(clean_text)
-                logger.info("Gemini Audio pop analysis succeeded with model %s: score=%s", model, data.get("final_score"))
+                logger.info("Gemini Audio pop analysis succeeded with model %s: score=%s (%s)",
+                            model, data.get("overall_score"), data.get("pop_quality"))
                 data["_model"] = model
                 return data
 

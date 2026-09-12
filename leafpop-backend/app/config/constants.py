@@ -13,8 +13,10 @@ ALLOWED_AUDIO_MIME_TYPES = {
     "audio/mpeg", "audio/mp3",
     "audio/webm",
     "audio/mp4", "audio/x-m4a", "audio/m4a",
+    "audio/ogg", "audio/flac", "audio/aac", "audio/3gpp",
+    "application/octet-stream"
 }
-ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".webm", ".m4a"}
+ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".webm", ".m4a", ".mp4", ".ogg", ".flac", ".aac", ".3gp"}
 
 # ---------------------------------------------------------------------------
 # Database tables
