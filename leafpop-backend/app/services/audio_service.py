@@ -72,6 +72,13 @@ async def upload_and_score_pop(user_id: str, filename: str, content: bytes,
     score_breakdown = score_real_pop(features)
     logger.info("Score calculated: user_id=%s final_score=%s", user_id, score_breakdown["final_score"])
 
+    # Enhance audio analysis using Google Gemini AI Audio model
+    from app.services.gemini_service import analyze_pop_audio_with_gemini
+    gemini_audio_data = await analyze_pop_audio_with_gemini(content, content_type)
+    if gemini_audio_data:
+        if gemini_audio_data.get("message"):
+            score_breakdown["message"] = str(gemini_audio_data["message"])
+
     saved = queries.save_pop_attempt(
         user_id=user_id,
         leaf_id=leaf_id,
@@ -110,6 +117,7 @@ async def upload_and_score_pop(user_id: str, filename: str, content: bytes,
         "pop_detected": True,
         "message": score_breakdown["message"],
         "prediction_comparison": comparison,
+        "ai_engine": "Gemini 2.5 Flash Audio" if gemini_audio_data else "Librosa Spectral Pipeline",
     }
 
 

@@ -1,8 +1,11 @@
 export interface LeafAnalysis {
-  leaf_id: string;
-  leaf_type: string;
-  health_condition: string;
-  dryness_score: number;
+  leaf_id?: string;
+  leaf_type?: string;
+  type?: string;
+  health_condition?: string;
+  condition?: string;
+  dryness_score?: number;
+  dryness?: number;
   vein_density: number;
   pop_potential: number;
   predicted_loudness: number;
@@ -19,10 +22,16 @@ export interface LeafUploadResponse {
 }
 
 export interface LeafReportResponse {
-  id: string;
-  image_url: string;
-  created_at: string;
-  analysis: LeafAnalysis | null;
+  id?: string;
+  image_url?: string;
+  created_at?: string;
+  analysis?: LeafAnalysis | null;
+  prediction?: any;
+  leaf?: {
+    id: string;
+    image_url: string;
+    created_at?: string;
+  };
 }
 
 export interface AudioScoreBreakdown {

@@ -6,6 +6,7 @@ import { DesktopSidebar } from './DesktopSidebar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -34,17 +35,30 @@ export const AppShell: React.FC<AppShellProps> = ({
         {/* Mobile Header */}
         <header className="lg:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-border/70 px-4 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 select-none">
-            <span className="text-2xl">🍃</span>
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/ilapottikal-logo.png" alt="IlaPottikal Logo" className="w-full h-full object-contain" />
+            </div>
             <span className="font-black text-lg text-forest tracking-tight">
-              LeafPop<span className="text-primary-600 font-medium text-xs ml-1">AI</span>
+              IlaPottikal
             </span>
           </Link>
-          <Link
-            href="/app/profile"
-            className="w-8 h-8 rounded-full bg-primary-100 border border-primary-200 flex items-center justify-center text-xs font-bold text-forest"
-          >
-            {user?.username?.charAt(0).toUpperCase() || 'L'}
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => (window as any).replayIlaPottikalIntro?.()}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-primary-700 bg-primary-50 border border-primary-200/80 rounded-full transition-all active:scale-95"
+              title="Replay Intro Video"
+            >
+              <Sparkles size={12} className="text-primary-600 animate-pulse" />
+              <span className="text-[11px]">Intro</span>
+            </button>
+            <Link
+              href="/app/profile"
+              className="w-8 h-8 rounded-full bg-primary-100 border border-primary-200 flex items-center justify-center text-xs font-bold text-forest"
+            >
+              {user?.username?.charAt(0).toUpperCase() || 'L'}
+            </Link>
+          </div>
         </header>
 
         {/* Dynamic Workspace */}

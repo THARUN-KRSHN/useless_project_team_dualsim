@@ -38,7 +38,7 @@ export const LeafCanvas: React.FC<LeafCanvasProps> = ({
   return (
     <div className={`relative ${className}`}>
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 45 }}
+        camera={{ position: [0, 0, 6.8], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
       >
         <ambientLight intensity={1.1} />

@@ -27,9 +27,14 @@ export const HeroSection: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Pill variant="green" size="md" className="mb-6 shadow-sm">
-              <Sparkles size={12} className="text-primary-600 animate-pulse-slow" />
-              THE WORLD'S MOST UNNECESSARY AI GAME
+            <Pill variant="green" size="md" className="mb-6 shadow-sm flex items-center gap-2">
+              <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/ilapottikal-logo.png" alt="IlaPottikal" className="w-full h-full object-contain" />
+              </div>
+              <span className="font-extrabold text-forest uppercase tracking-wider text-xs">IlaPottikal</span>
+              <span className="text-forest-muted">•</span>
+              <span className="text-xs">The Science of Popping Leaves</span>
             </Pill>
           </motion.div>
 
@@ -100,13 +105,13 @@ export const HeroSection: React.FC = () => {
 
         {/* Right 3D Leaf Canvas with Orbiting Badges */}
         <div className="lg:col-span-5 relative flex items-center justify-center">
-          <div className="relative w-full max-w-[380px] h-[380px] sm:h-[440px] flex items-center justify-center">
+          <div className="relative w-full max-w-[420px] h-[440px] sm:h-[500px] flex items-center justify-center">
             {/* Background glowing organic circle */}
             <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-primary-100/70 via-surface-accent to-lime-50 blur-2xl -z-10" />
 
             {/* 3D Leaf Canvas */}
             <LeafCanvas
-              scale={1.25}
+              scale={1.1}
               popping={leafPopping}
               onClick={handleHeroLeafClick}
               className="w-full h-full cursor-pointer"

@@ -40,10 +40,13 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col justify-center items-center px-4 py-12">
-      <Link href="/" className="flex items-center gap-2 mb-8 group select-none">
-        <span className="text-3xl transition-transform duration-300 group-hover:rotate-12">🍃</span>
+      <Link href="/" className="flex items-center gap-3 mb-8 group select-none">
+        <div className="w-12 h-12 flex items-center justify-center group-hover:scale-110 transition-transform">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/ilapottikal-logo.png" alt="IlaPottikal Logo" className="w-full h-full object-contain" />
+        </div>
         <span className="font-black text-2xl tracking-tight text-forest">
-          LeafPop<span className="text-primary-600 font-medium text-sm ml-1">AI</span>
+          IlaPottikal
         </span>
       </Link>
 

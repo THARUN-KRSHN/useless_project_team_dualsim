@@ -237,10 +237,15 @@ export default function LeafAnalyzerPage() {
       {flowState === 'complete' && analysis && (
         <div className="max-w-3xl mx-auto space-y-6">
           {/* Header Badge */}
-          <div className="flex items-center justify-between">
-            <Pill variant="green" size="md" icon={<CheckCircle2 size={14} className="text-primary-600" />}>
-              LEAF POP REPORT
-            </Pill>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Pill variant="green" size="md" icon={<CheckCircle2 size={14} className="text-primary-600" />}>
+                LEAF POP REPORT
+              </Pill>
+              <Pill variant="amber" size="sm" icon={<Sparkles size={12} className="text-amber-600" />}>
+                {(analysis as any).ai_engine || 'Gemini AI Vision'}
+              </Pill>
+            </div>
             <span className="text-xs font-mono text-forest-subtle">
               ID: {analyzedLeafId?.slice(0, 8)}...
             </span>
@@ -248,6 +253,17 @@ export default function LeafAnalyzerPage() {
 
           {/* Main Hero Score Card */}
           <Card className="bg-gradient-to-br from-white via-primary-50/30 to-lime-50/30 border-primary-200 text-center p-8 sm:p-10 shadow-soft-md">
+            {previewUrl && (
+              <div className="mb-6 flex justify-center">
+                <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-3xl overflow-hidden border border-border shadow-soft-md">
+                  <img
+                    src={previewUrl}
+                    alt="Analyzed leaf"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
             <Score
               value={analysis.pop_potential}
               label="Predicted Pop Potential"
@@ -263,14 +279,14 @@ export default function LeafAnalyzerPage() {
             <div className="bg-white border border-border rounded-3xl p-5 shadow-soft">
               <span className="text-xs font-bold text-forest-subtle block mb-1">Leaf Type</span>
               <span className="text-base sm:text-lg font-bold text-forest capitalize">
-                {formatDisplayValue(analysis.leaf_type)}
+                {formatDisplayValue(analysis.leaf_type || analysis.type)}
               </span>
             </div>
 
             <div className="bg-white border border-border rounded-3xl p-5 shadow-soft">
               <span className="text-xs font-bold text-forest-subtle block mb-1">Condition</span>
               <span className="text-base sm:text-lg font-bold text-forest capitalize">
-                {formatDisplayValue(analysis.health_condition)}
+                {formatDisplayValue(analysis.health_condition || analysis.condition)}
               </span>
             </div>
 
@@ -284,7 +300,7 @@ export default function LeafAnalyzerPage() {
             <div className="bg-white border border-border rounded-3xl p-5 shadow-soft">
               <span className="text-xs font-bold text-forest-subtle block mb-1">Duration</span>
               <span className="text-base sm:text-lg font-bold text-forest font-mono">
-                {Math.round(analysis.predicted_duration * 1000)} ms
+                {Math.round((analysis.predicted_duration || 0) * 1000)} ms
               </span>
             </div>
           </div>
@@ -315,8 +331,8 @@ export default function LeafAnalyzerPage() {
               />
               <Progress
                 label="Dryness Score"
-                value={analysis.dryness_score}
-                displayValue={`${analysis.dryness_score}%`}
+                value={analysis.dryness_score ?? analysis.dryness ?? 0}
+                displayValue={`${analysis.dryness_score ?? analysis.dryness ?? 0}%`}
                 variant="amber"
               />
             </div>

@@ -19,13 +19,14 @@ export const DesktopSidebar: React.FC = () => {
   return (
     <aside className="hidden lg:flex flex-col w-64 xl:w-72 bg-white border-r border-border h-screen sticky top-0 px-5 py-6 select-none z-30">
       {/* Brand */}
-      <Link href="/" className="flex items-center gap-2.5 px-2 mb-8 group">
-        <span className="text-2xl transition-transform duration-300 group-hover:rotate-12">
-          🍃
-        </span>
+      <Link href="/" className="flex items-center gap-2 px-1 mb-8 group">
+        <div className="w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/ilapottikal-logo.png" alt="IlaPottikal Logo" className="w-full h-full object-contain" />
+        </div>
         <div>
           <span className="font-black text-xl tracking-tight text-forest block leading-none">
-            LeafPop<span className="text-primary-600 font-medium text-xs ml-1">AI</span>
+            IlaPottikal
           </span>
           <span className="text-[10px] text-forest-subtle font-medium uppercase tracking-wider block mt-1">
             Crack Lab

@@ -16,12 +16,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
-        <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center text-3xl animate-bounce mb-3">
-          🍃
+      <div className="min-h-screen bg-[#f7f8f7] flex flex-col items-center justify-center p-4">
+        <div className="w-16 h-16 mb-3 animate-bounce">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/ilapottikal-logo.png" alt="IlaPottikal" className="w-full h-full object-contain" />
         </div>
-        <p className="text-xs font-bold text-forest-subtle uppercase tracking-wider">
-          Loading LeafPop...
+        <p className="text-xs font-bold text-forest-subtle uppercase tracking-widest">
+          Loading IlaPottikal...
         </p>
       </div>
     );

@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     supabase_key: str = ""          # anon/public key (safe for read-mostly ops)
     supabase_service_key: str = ""  # service-role key, server-side only, never exposed
 
+    # --- Gemini AI ---
+    gemini_api_key: str = ""
+
     # --- Storage buckets ---
     supabase_storage_leaf_bucket: str = "leaf-images"
     supabase_storage_audio_bucket: str = "pop-audio"

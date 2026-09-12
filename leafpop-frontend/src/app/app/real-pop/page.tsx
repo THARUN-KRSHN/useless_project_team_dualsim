@@ -168,12 +168,27 @@ export default function RealPopPage() {
       {/* Linked Leaf Banner (if arriving from Analyzer) */}
       {linkedLeaf && (
         <div className="mb-6 bg-primary-50/80 border border-primary-200/80 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-primary-900 font-bold">
-            <LinkIcon size={14} className="text-primary-600" />
-            <span>LINKED TO LEAF {linkedLeaf.id.slice(0, 8)}...</span>
-            <span className="text-forest-muted font-normal">
-              (AI Predicted: {linkedLeaf.analysis?.pop_potential}/100)
-            </span>
+          <div className="flex items-center gap-3 text-primary-900 font-bold">
+            {(linkedLeaf.leaf?.image_url || (linkedLeaf as any).image_url) && (
+              <img
+                src={linkedLeaf.leaf?.image_url || (linkedLeaf as any).image_url}
+                alt="Linked leaf"
+                className="w-10 h-10 rounded-xl object-cover border border-primary-300/80 shadow-sm shrink-0"
+              />
+            )}
+            <div>
+              <div className="flex items-center gap-1.5">
+                <LinkIcon size={14} className="text-primary-600" />
+                <span>
+                  LINKED TO LEAF {(linkedLeaf.leaf?.id || linkedLeaf.id || '').slice(0, 8)}...
+                </span>
+              </div>
+              <span className="text-forest-muted font-normal block mt-0.5">
+                AI Predicted Score:{' '}
+                {linkedLeaf.prediction?.pop_potential || linkedLeaf.analysis?.pop_potential || '--'}
+                /100
+              </span>
+            </div>
           </div>
           <Pill variant="green" size="sm">
             AI vs Reality Active
