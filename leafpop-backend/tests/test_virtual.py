@@ -1,3 +1,4 @@
+from app.schemas.virtual import VirtualPopRequest
 from app.services.virtual_game_service import score_virtual_pop
 
 
@@ -37,3 +38,19 @@ def test_score_is_bounded_0_to_100():
     extreme = _base_interaction(max_velocity=9999, reaction_time=0, total_duration=0, combo=100)
     result = score_virtual_pop(extreme)
     assert 0 <= result["final_score"] <= 100
+
+
+def test_frontend_virtual_payload_is_accepted():
+    payload = {
+        "click_x": 0.48,
+        "click_y": 0.52,
+        "velocity": 0.82,
+        "duration_ms": 340,
+        "reaction_time_ms": 180,
+    }
+    model = VirtualPopRequest.model_validate(payload)
+    assert model.impact_x == 0.48
+    assert model.impact_y == 0.52
+    assert model.total_duration == 0.34
+    assert model.reaction_time == 0.18
+    assert model.tap_count == 1

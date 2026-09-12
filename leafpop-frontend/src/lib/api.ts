@@ -12,6 +12,31 @@ import {
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+function getErrorMessage(payload: any, fallback: string): string {
+  if (!payload) return fallback;
+
+  if (typeof payload === 'string') return payload;
+
+  if (typeof payload === 'object') {
+    if (payload.error) {
+      if (typeof payload.error.message === 'string') return payload.error.message;
+      if (Array.isArray(payload.error.message)) {
+        return payload.error.message.map((item: any) => typeof item === 'string' ? item : item?.msg || JSON.stringify(item)).join(', ');
+      }
+      if (payload.error.code) return `${payload.error.code}: ${JSON.stringify(payload.error)}`;
+    }
+
+    if (typeof payload.detail === 'string') return payload.detail;
+    if (Array.isArray(payload.detail)) {
+      return payload.detail.map((item: any) => typeof item === 'string' ? item : item?.msg || JSON.stringify(item)).join(', ');
+    }
+
+    if (payload.message) return payload.message;
+  }
+
+  return fallback;
+}
+
 function getAuthHeaders(token?: string | null, isMultipart = false): HeadersInit {
   const headers: Record<string, string> = {};
   if (!isMultipart) {
@@ -114,7 +139,7 @@ export async function submitVirtualPop(payload: VirtualPopRequest, token?: strin
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error?.message || data.detail || "Virtual pop failed to record.");
+    throw new Error(getErrorMessage(data, "Virtual pop failed to record."));
   }
   return data;
 }

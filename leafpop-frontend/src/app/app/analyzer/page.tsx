@@ -26,6 +26,11 @@ import {
 
 type FlowState = 'empty' | 'preview' | 'uploading' | 'analyzing' | 'complete' | 'error';
 
+const formatDisplayValue = (value?: string | null) => {
+  if (!value) return 'Unknown';
+  return value.toString().replace(/_/g, ' ');
+};
+
 export default function LeafAnalyzerPage() {
   const router = useRouter();
   const { token } = useAuth();
@@ -258,21 +263,21 @@ export default function LeafAnalyzerPage() {
             <div className="bg-white border border-border rounded-3xl p-5 shadow-soft">
               <span className="text-xs font-bold text-forest-subtle block mb-1">Leaf Type</span>
               <span className="text-base sm:text-lg font-bold text-forest capitalize">
-                {analysis.leaf_type.replace('_', ' ')}
+                {formatDisplayValue(analysis.leaf_type)}
               </span>
             </div>
 
             <div className="bg-white border border-border rounded-3xl p-5 shadow-soft">
               <span className="text-xs font-bold text-forest-subtle block mb-1">Condition</span>
               <span className="text-base sm:text-lg font-bold text-forest capitalize">
-                {analysis.health_condition}
+                {formatDisplayValue(analysis.health_condition)}
               </span>
             </div>
 
             <div className="bg-white border border-border rounded-3xl p-5 shadow-soft">
               <span className="text-xs font-bold text-forest-subtle block mb-1">Difficulty</span>
               <span className="text-base sm:text-lg font-bold text-forest capitalize">
-                {analysis.difficulty}
+                {formatDisplayValue(analysis.difficulty)}
               </span>
             </div>
 

@@ -46,11 +46,33 @@ export default function VirtualPopPage() {
   const [sessionBest, setSessionBest] = useState(0);
   const leafRef = useRef<HTMLDivElement>(null);
   const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const crackAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const playCrackSound = useCallback((score: number) => {
+    const safeScore = Math.max(0, Math.min(100, score));
+    const volume = 0.2 + (safeScore / 100) * 0.8;
+
+    if (!crackAudioRef.current) {
+      const audio = new Audio('/pop.mp3');
+      audio.preload = 'auto';
+      audio.volume = volume;
+      crackAudioRef.current = audio;
+    }
+
+    const audio = crackAudioRef.current;
+    audio.volume = volume;
+    audio.currentTime = 0;
+    audio.play().catch(() => undefined);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (countdownRef.current) clearTimeout(countdownRef.current);
+      if (crackAudioRef.current) {
+        crackAudioRef.current.pause();
+        crackAudioRef.current.src = '';
+      }
     };
   }, []);
 
@@ -104,13 +126,16 @@ export default function VirtualPopPage() {
 
     setClickPos({ x: relX * 100, y: relY * 100 });
     setParticles(generateParticles(x, y));
-    setPhase('popped');
 
     // Velocity based on how fast they clicked (closer to center = better)
     const distFromCenter = Math.sqrt(
       Math.pow(relX - 0.5, 2) + Math.pow(relY - 0.5, 2)
     );
     const velocity = Math.max(0.1, 1 - distFromCenter * 1.5);
+    const estimatedScore = Math.round(Math.max(10, Math.min(100, velocity * 100)));
+
+    setPhase('popped');
+    playCrackSound(estimatedScore);
 
     try {
       const res = await submitVirtualPop(
@@ -141,7 +166,7 @@ export default function VirtualPopPage() {
       setError(err.message || 'Pop submission failed.');
       setPhase('error');
     }
-  }, [phase, token, reactionStartTime, clickStartTime]);
+  }, [phase, playCrackSound, token, reactionStartTime, clickStartTime]);
 
   const reset = () => {
     setPhase('ready');
@@ -263,36 +288,65 @@ export default function VirtualPopPage() {
                 <motion.div
                   key="go"
                   initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: phase === 'popped' ? 0 : 1 }}
-                  transition={phase === 'popped' ? { duration: 0.18 } : { type: 'spring', stiffness: 260, damping: 22 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 22 }}
                   className="relative flex items-center justify-center w-full h-full min-h-[320px]"
                 >
-                  {phase === 'go' && (
-                    <div
-                      ref={leafRef}
-                      onClick={handleLeafClick}
-                      className="relative cursor-pointer group"
-                      id="virtual-leaf-target"
-                    >
-                      {/* Pulse ring */}
+                  <div
+                    ref={leafRef}
+                    onClick={handleLeafClick}
+                    className="relative cursor-pointer group"
+                    id="virtual-leaf-target"
+                  >
+                    {phase === 'go' && (
+                      <>
+                        <motion.div
+                          animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                          className="absolute inset-[-24px] rounded-full border-2 border-primary-400/40"
+                        />
+
+                        <motion.img
+                          src="/leaf.png"
+                          alt="Leaf"
+                          animate={{ rotate: [-8, 8, -6], x: [-10, 10, -6], scale: [1, 1.04, 1] }}
+                          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                          className="relative w-[190px] h-[190px] object-contain drop-shadow-[0_18px_28px_rgba(34,197,94,0.35)]"
+                        />
+
+                        <p className="text-center text-xs font-bold text-primary-600 mt-3 uppercase tracking-wider">
+                          TAP NOW!
+                        </p>
+                      </>
+                    )}
+
+                    {phase === 'popped' && (
                       <motion.div
-                        animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                        className="absolute inset-[-20px] rounded-full border-2 border-primary-400/40"
-                      />
-                      <motion.div
-                        animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.04, 0.98, 1] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                        className="text-[100px] select-none drop-shadow-lg group-hover:scale-105 transition-transform"
-                        style={{ filter: 'drop-shadow(0 12px 32px rgba(34,197,94,0.4))' }}
+                        initial={{ opacity: 0.5, scale: 0.82 }}
+                        animate={{ opacity: 1, scale: 1, rotate: [0, 2, -2, 0] }}
+                        transition={{ duration: 0.35, ease: 'easeOut' }}
+                        className="relative"
                       >
-                        🍃
+                        <motion.img
+                          src="/leaf.png"
+                          alt="Leaf"
+                          initial={{ opacity: 1, scale: 1, rotate: 0 }}
+                          animate={{ opacity: 0, scale: 0.72, rotate: -18, x: -10 }}
+                          transition={{ duration: 0.22, ease: 'easeInOut' }}
+                          className="absolute inset-0 w-[190px] h-[190px] object-contain"
+                        />
+
+                        <motion.img
+                          src="/cracked.png"
+                          alt="Cracked leaf"
+                          initial={{ opacity: 0, scale: 0.7, rotate: -12 }}
+                          animate={{ opacity: 1, scale: 1.08, rotate: [0, 2, -2, 0], x: [0, 4, -2, 0] }}
+                          transition={{ duration: 0.38, ease: 'easeOut' }}
+                          className="relative w-[190px] h-[190px] object-contain drop-shadow-[0_18px_28px_rgba(34,197,94,0.35)]"
+                        />
                       </motion.div>
-                      <p className="text-center text-xs font-bold text-primary-600 mt-3 uppercase tracking-wider">
-                        TAP NOW!
-                      </p>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Particles burst on pop */}
                   {phase === 'popped' && particles.map((p) => (

@@ -33,12 +33,18 @@ def _impact_position_score(x: float, y: float) -> float:
 
 
 def score_virtual_pop(interaction: dict) -> dict:
-    velocity_score = normalize(interaction["max_velocity"], 5, 120)
-    reaction_score = normalize(0.6 - interaction["reaction_time"], -0.2, 0.6)
-    impact_position_score = _impact_position_score(interaction["impact_x"], interaction["impact_y"])
+    velocity_value = interaction.get("max_velocity", interaction.get("velocity", 0))
+    reaction_value = interaction.get("reaction_time", interaction.get("reaction_time_ms", 0) / 1000.0)
+    impact_x = interaction.get("impact_x", interaction.get("click_x", 0.5))
+    impact_y = interaction.get("impact_y", interaction.get("click_y", 0.5))
+    total_duration = interaction.get("total_duration", interaction.get("duration_ms", 0) / 1000.0)
+
+    velocity_score = normalize(float(velocity_value), 5, 120)
+    reaction_score = normalize(0.6 - float(reaction_value), -0.2, 0.6)
+    impact_position_score = _impact_position_score(float(impact_x), float(impact_y))
     # Timing rewards a decisive, quick interaction over a long drawn-out one.
-    timing_score = normalize(1.0 - interaction["total_duration"], -0.5, 1.0)
-    combo_score = normalize(interaction.get("combo", 1), 1, 10)
+    timing_score = normalize(1.0 - float(total_duration), -0.5, 1.0)
+    combo_score = normalize(float(interaction.get("combo", 1)), 1, 10)
 
     final_score = weighted_sum(
         {
