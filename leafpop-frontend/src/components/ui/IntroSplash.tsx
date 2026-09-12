@@ -10,21 +10,13 @@ interface IntroSplashProps {
 }
 
 export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onComplete }) => {
-  const [isVisible, setIsVisible] = useState(false);
+  // Always show intro on page load / reload or when forced
+  const [isVisible, setIsVisible] = useState(true);
   const [useVideo, setUseVideo] = useState(true);
   const [popTriggered, setPopTriggered] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Show intro on initial page load / session or when forced
-    const hasSeen = sessionStorage.getItem('ilapottikal_intro_seen');
-    if (!hasSeen || forceShow) {
-      setIsVisible(true);
-      if (!forceShow) {
-        sessionStorage.setItem('ilapottikal_intro_seen', 'true');
-      }
-    }
-
     // Register global trigger for "Replay Intro"
     const handleReplay = () => {
       setPopTriggered(false);
@@ -47,7 +39,7 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
     return () => {
       delete (window as any).replayIlaPottikalIntro;
     };
-  }, [forceShow]);
+  }, []);
 
   // Handle video autoplay, audio pop sound sync, and maximum safety timeout
   useEffect(() => {
@@ -133,8 +125,8 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
           </button>
 
           {useVideo ? (
-            /* High Definition Rendered Fullscreen Intro Video Scene (Mobile & Desktop Responsive) */
-            <div className="relative w-full h-[100dvh] flex flex-col items-center justify-center bg-[#f7f8f7] overflow-hidden">
+            /* High Definition Rendered Intro Video Scene (Fit to screen without cropping logo on mobile) */
+            <div className="relative w-full h-[100dvh] flex flex-col items-center justify-center bg-[#f7f8f7] overflow-hidden p-2 sm:p-0">
               <video
                 ref={videoRef}
                 src="/intro-video.mp4"
@@ -144,7 +136,7 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ forceShow = false, onC
                 preload="auto"
                 onEnded={handleVideoEnded}
                 onError={handleVideoError}
-                className="w-full h-full object-cover min-w-full min-h-full bg-[#f7f8f7]"
+                className="w-full h-full object-contain max-w-full max-h-full bg-[#f7f8f7]"
               />
             </div>
           ) : (
