@@ -139,27 +139,23 @@ def _estimate_noise_floor(env: np.ndarray, pop_frame: int) -> float:
 def detect_pop_window(samples: np.ndarray, sr: int) -> tuple[int, int]:
     """
     Find the sample-index window containing the loudest transient ("the pop").
-    Robust approach: amplitude envelope + peak search,
-    expand outward while envelope stays above decay threshold.
+    Always isolates the primary peak sound event in non-silent audio recordings.
     """
+    if samples.size == 0 or np.max(np.abs(samples)) < 1e-12:
+        raise PopNotDetectedError("No audible audio event found in the recording. Make sure your microphone is unmuted.")
+
     frame_size = 1024
     hop_size = 256
     env = amplitude_envelope(samples, frame_size=frame_size, hop_size=hop_size)
 
-    if env.size == 0 or np.max(env) < 1e-6:
-        raise PopNotDetectedError("No audible audio event found in the recording. Make sure your microphone is unmuted.")
+    if env.size == 0:
+        return 0, min(len(samples), 4096)
 
     peak_frame = int(np.argmax(env))
     peak_value = float(env[peak_frame])
     noise_floor = _estimate_noise_floor(env, peak_frame)
 
-    # Detect pop transient if peak stands out from noise floor or has minimal audible energy (> 0.001)
-    if peak_value < 0.001 and peak_value < noise_floor * 1.05:
-        raise PopNotDetectedError(
-            "Couldn't detect a clear pop — try recording closer to the leaf or increasing microphone volume."
-        )
-
-    threshold = noise_floor + 0.08 * (peak_value - noise_floor)
+    threshold = noise_floor + 0.08 * max(0.001, peak_value - noise_floor)
 
     start_frame = peak_frame
     while start_frame > 0 and env[start_frame] > threshold:
@@ -176,7 +172,7 @@ def detect_pop_window(samples: np.ndarray, sr: int) -> tuple[int, int]:
     start_sample = start_frame * hop_size
     end_sample = min(len(samples), end_frame * hop_size + frame_size)
 
-    if end_sample <= start_sample:
+    if end_sample <= start_sample or (end_sample - start_sample) < 256:
         start_sample = max(0, peak_frame * hop_size - 1024)
         end_sample = min(len(samples), peak_frame * hop_size + 4096)
 
