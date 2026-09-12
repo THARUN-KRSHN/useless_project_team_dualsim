@@ -43,6 +43,13 @@ function getScoreGradient(score: number) {
   return 'from-amber-500 to-orange-400';
 }
 
+function formatDisplayName(username?: string | null) {
+  if (!username || !username.trim()) return 'Leaf Popper';
+  const cleaned = username.trim();
+  if (/^LeafPopper-[a-f0-9-]+$/i.test(cleaned)) return 'Leaf Popper';
+  return cleaned;
+}
+
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const [mode, setMode] = useState<LeaderboardMode>('all');
@@ -164,7 +171,7 @@ export default function LeaderboardPage() {
               {entries[1].username.charAt(0).toUpperCase()}
             </div>
             <p className="text-xs font-bold text-forest truncate max-w-full text-center">
-              {entries[1].username}
+              {formatDisplayName(entries[1].username)}
             </p>
             <p className="text-sm font-black text-forest-muted mb-1">{entries[1].best_score}</p>
             <div className="w-full bg-slate-200 rounded-t-xl h-16 flex items-center justify-center">
@@ -183,7 +190,7 @@ export default function LeaderboardPage() {
               {entries[0].username.charAt(0).toUpperCase()}
             </div>
             <p className="text-xs font-bold text-forest truncate max-w-full text-center">
-              {entries[0].username}
+              {formatDisplayName(entries[0].username)}
             </p>
             <p className="text-lg font-black text-primary-600 mb-1">{entries[0].best_score}</p>
             <div className="w-full bg-gradient-to-b from-amber-200 to-amber-100 rounded-t-xl h-24 flex items-center justify-center">
@@ -202,7 +209,7 @@ export default function LeaderboardPage() {
               {entries[2].username.charAt(0).toUpperCase()}
             </div>
             <p className="text-xs font-bold text-forest truncate max-w-full text-center">
-              {entries[2].username}
+              {formatDisplayName(entries[2].username)}
             </p>
             <p className="text-sm font-black text-forest-muted mb-1">{entries[2].best_score}</p>
             <div className="w-full bg-orange-100 rounded-t-xl h-10 flex items-center justify-center">
@@ -260,23 +267,24 @@ export default function LeaderboardPage() {
                 const isMe = user && entry.username === user.username;
                 const isTop3 = entry.rank <= 3;
 
+                const displayName = formatDisplayName(entry.username);
+                const firstLetter = displayName.charAt(0).toUpperCase();
+
                 return (
                   <motion.div
                     key={`${entry.username}-${entry.rank}`}
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.03 }}
-                    className={`grid grid-cols-12 items-center px-4 sm:px-6 py-3.5 transition-colors ${
+                    className={`flex flex-col gap-2 px-3 py-3 transition-colors sm:grid sm:grid-cols-12 sm:items-center sm:gap-0 sm:px-6 ${
                       isMe ? 'bg-primary-50/60' : 'hover:bg-surface-muted/40'
                     }`}
                   >
-                    {/* Rank */}
-                    <div className="col-span-1 flex justify-center">
-                      {getRankIcon(entry.rank)}
-                    </div>
+                    <div className="flex items-center gap-3 min-w-0 sm:col-span-6">
+                      <div className="flex items-center gap-2 shrink-0">
+                        {getRankIcon(entry.rank)}
+                      </div>
 
-                    {/* Username */}
-                    <div className="col-span-5 sm:col-span-4 flex items-center gap-3 min-w-0">
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                           isTop3
@@ -284,15 +292,16 @@ export default function LeaderboardPage() {
                             : 'bg-primary-100 text-primary-700 border border-primary-200'
                         }`}
                       >
-                        {entry.username.charAt(0).toUpperCase()}
+                        {firstLetter}
                       </div>
-                      <div className="min-w-0">
+
+                      <div className="min-w-0 flex-1">
                         <span
                           className={`text-sm font-bold block truncate ${
                             isMe ? 'text-primary-700' : 'text-forest'
                           }`}
                         >
-                          {entry.username}
+                          {displayName}
                           {isMe && (
                             <span className="ml-1.5 text-[10px] font-bold text-primary-600 bg-primary-100 px-1.5 py-0.5 rounded-full">
                               You
@@ -302,23 +311,25 @@ export default function LeaderboardPage() {
                       </div>
                     </div>
 
-                    {/* Score */}
-                    <div className="col-span-3 flex justify-center">
+                    <div className="flex items-center justify-between gap-2 sm:col-span-3 sm:justify-center">
                       <div
                         className={`bg-gradient-to-r ${getScoreGradient(
                           entry.best_score
-                        )} text-white text-sm font-black px-3 py-1 rounded-full shadow-sm`}
+                        )} text-white text-sm font-black px-3 py-1 rounded-full shadow-sm whitespace-nowrap`}
                       >
                         {entry.best_score}
                       </div>
                     </div>
 
-                    {/* Total Pops / Playback */}
-                    <div className="col-span-3 sm:col-span-4 text-center">
+                    <div className="sm:col-span-3 sm:text-center">
                       {entry.audio_url ? (
-                        <audio controls src={entry.audio_url} className="w-full max-w-[140px] h-8 mx-auto" />
+                        <audio
+                          controls
+                          src={entry.audio_url}
+                          className="w-full max-w-[140px] h-8 mx-auto block sm:mx-auto"
+                        />
                       ) : (
-                        <span className="text-sm font-semibold text-forest-muted">
+                        <span className="text-sm font-semibold text-forest-muted block text-left sm:text-center">
                           {entry.total_pops}
                           <span className="text-xs font-normal ml-1 hidden sm:inline">pops</span>
                         </span>

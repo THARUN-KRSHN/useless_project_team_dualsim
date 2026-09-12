@@ -74,13 +74,23 @@ def upload_to_storage(bucket: str, path: str, content: bytes, content_type: str)
 # profiles
 # ---------------------------------------------------------------------------
 
+def _normalize_username(username: str | None, user_id: str | None = None) -> str:
+    candidate = (username or "").strip()
+    if candidate and not candidate.lower().startswith("leafpopper-"):
+        return candidate
+    if user_id and user_id.lower() == "demo-user-123":
+        return "DemoPopper"
+    return "Leaf Popper"
+
+
 def get_or_create_profile(user_id: str, username: str | None = None) -> dict:
+    normalized_username = _normalize_username(username, user_id)
     if _is_dev():
         if user_id in _MOCK_DB[TABLE_PROFILES]:
             return _MOCK_DB[TABLE_PROFILES][user_id]
         profile = {
             "id": user_id,
-            "username": username or f"LeafPopper-{user_id[:8]}",
+            "username": normalized_username,
             "avatar_url": None,
             "created_at": _now_iso(),
             "total_pops": 0,
@@ -96,7 +106,7 @@ def get_or_create_profile(user_id: str, username: str | None = None) -> dict:
             return result.data[0]
         new_profile = {
             "id": user_id,
-            "username": username or f"LeafPopper-{user_id[:8]}",
+            "username": normalized_username,
             "avatar_url": None,
             "created_at": _now_iso(),
             "total_pops": 0,
@@ -108,7 +118,7 @@ def get_or_create_profile(user_id: str, username: str | None = None) -> dict:
         if _is_dev():
             profile = {
                 "id": user_id,
-                "username": username or f"LeafPopper-{user_id[:8]}",
+                "username": normalized_username,
                 "avatar_url": None,
                 "created_at": _now_iso(),
                 "total_pops": 0,
@@ -575,13 +585,20 @@ def get_username(user_id: str) -> str:
     if user_id == "demo-user-123":
         return "DemoPopper"
     if _is_dev() and user_id in _MOCK_DB[TABLE_PROFILES]:
-        return _MOCK_DB[TABLE_PROFILES][user_id].get("username", "Unknown")
+        return _MOCK_DB[TABLE_PROFILES][user_id].get("username", "Leaf Popper")
 
     try:
         client = get_supabase()
         result = client.table(TABLE_PROFILES).select("username").eq("id", user_id).limit(1).execute()
         if result.data:
-            return result.data[0].get("username", "Unknown")
-        return _MOCK_DB[TABLE_PROFILES].get(user_id, {}).get("username", "DemoPopper")
+            username = result.data[0].get("username")
+            if username and not username.lower().startswith("leafpopper-"):
+                return username
+            return "Leaf Popper"
+        found = _MOCK_DB[TABLE_PROFILES].get(user_id, {})
+        username = found.get("username")
+        if username and not username.lower().startswith("leafpopper-"):
+            return username
+        return "Leaf Popper"
     except Exception:  # noqa: BLE001
-        return "DemoPopper"
+        return "Leaf Popper"
