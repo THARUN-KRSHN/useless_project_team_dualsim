@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { useAuth } from '@/context/AuthContext';
 import { uploadPopAudio, getLeafReport } from '@/lib/api';
-import { createSyntheticPopWav } from '@/lib/audio';
+import { createSyntheticPopWav, convertBlobToWav } from '@/lib/audio';
 import { PopUploadResponse, LeafReportResponse } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -78,12 +78,11 @@ export default function RealPopPage() {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop());
         const mimeType = mediaRecorder.mimeType || 'audio/webm';
-        const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : mimeType.includes('wav') ? 'wav' : 'webm';
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        const file = new File([audioBlob], `mic_pop_${Date.now()}.${ext}`, { type: mimeType });
+        const file = await convertBlobToWav(audioBlob);
         setSelectedFile(file);
         setAudioPreviewUrl(URL.createObjectURL(file));
         setFlowState('recorded');

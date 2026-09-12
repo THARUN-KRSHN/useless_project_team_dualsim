@@ -260,13 +260,13 @@ def get_latest_analysis_for_leaf(leaf_id: str) -> dict | None:
 def save_pop_attempt(user_id: str, leaf_id: str | None, audio_url: str,
                       audio_features: dict, score_breakdown: dict,
                       audio_hash: str, source: str = "uploaded") -> dict:
+    source = source if source in {"uploaded", "recorded"} else "uploaded"
     record = {
         "id": _new_id(),
         "user_id": user_id,
         "leaf_id": leaf_id,
         "audio_url": audio_url,
         "audio_hash": audio_hash,
-        "source": source if source in {"uploaded", "recorded"} else "uploaded",
         "audio_duration": audio_features.get("audio_duration"),
         "peak_amplitude": audio_features.get("peak_amplitude"),
         "rms_energy": audio_features.get("rms_energy"),
@@ -282,6 +282,11 @@ def save_pop_attempt(user_id: str, leaf_id: str | None, audio_url: str,
         "final_score": score_breakdown.get("final_score"),
         "created_at": _now_iso(),
     }
+    if source == "recorded":
+        record["source"] = "recorded"
+    else:
+        record["source"] = "uploaded"
+
     if _is_dev():
         _MOCK_DB[TABLE_POP_ATTEMPTS][record["id"]] = record
         return record
@@ -294,6 +299,10 @@ def save_pop_attempt(user_id: str, leaf_id: str | None, audio_url: str,
         if _is_dev():
             _MOCK_DB[TABLE_POP_ATTEMPTS][record["id"]] = record
             return record
+        if "source" in str(exc) and "does not exist" in str(exc):
+            safe_record = {k: v for k, v in record.items() if k != "source"}
+            client.table(TABLE_POP_ATTEMPTS).insert(safe_record).execute()
+            return safe_record
         raise DatabaseError(f"Failed to save pop attempt: {exc}") from exc
 
 
@@ -506,10 +515,19 @@ def fetch_leaderboard_rows(mode: str, limit: int = 10, source: str | None = None
     try:
         client = get_supabase()
         if mode in ("real", "all"):
-            real_query = client.table(TABLE_POP_ATTEMPTS).select("user_id, final_score, created_at, audio_url, source")
-            if source not in (None, "all"):
-                real_query = real_query.eq("source", source)
-            real = real_query.order("final_score", desc=True).limit(limit).execute()
+            try:
+                real_query = client.table(TABLE_POP_ATTEMPTS).select("user_id, final_score, created_at, audio_url, source")
+                if source not in (None, "all"):
+                    real_query = real_query.eq("source", source)
+                real = real_query.order("final_score", desc=True).limit(limit).execute()
+            except Exception as exc:  # noqa: BLE001
+                if "source" in str(exc) and "does not exist" in str(exc):
+                    real = client.table(TABLE_POP_ATTEMPTS).select("user_id, final_score, created_at, audio_url").order("final_score", desc=True).limit(limit).execute()
+                    for r in real.data or []:
+                        rows.append({**r, "source": "uploaded", "mode": "real"})
+                    rows.sort(key=lambda r: r.get("final_score", 0), reverse=True)
+                    return rows[:limit]
+                raise
             for r in real.data or []:
                 rows.append({**r, "mode": "real"})
 

@@ -63,6 +63,73 @@ export function playLeafPopSound(volume: number = 0.8) {
   }
 }
 
+export function encodeWav(audioBuffer: AudioBuffer): Blob {
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const format = 1;
+  const bitDepth = 16;
+  const samples = audioBuffer.length;
+  const blockAlign = numChannels * bitDepth / 8;
+  const byteRate = sampleRate * blockAlign;
+  const dataLength = samples * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(buffer);
+
+  const writeString = (offset: number, text: string) => {
+    for (let i = 0; i < text.length; i++) {
+      view.setUint8(offset + i, text.charCodeAt(i));
+    }
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, format, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
+
+  let offset = 44;
+  const channelData = Array.from({ length: numChannels }, (_, ch) => audioBuffer.getChannelData(ch));
+
+  for (let i = 0; i < samples; i++) {
+    for (let channel = 0; channel < numChannels; channel++) {
+      const sample = Math.max(-1, Math.min(1, channelData[channel][i]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+export async function convertBlobToWav(blob: Blob): Promise<File> {
+  if (blob.type.includes('wav')) {
+    return new File([blob], `recording.wav`, { type: 'audio/wav' });
+  }
+
+  const arrayBuffer = await blob.arrayBuffer();
+  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioCtx) {
+    return new File([blob], `recording.webm`, { type: blob.type || 'audio/webm' });
+  }
+
+  const audioContext = new AudioCtx();
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    const wavBlob = encodeWav(audioBuffer);
+    return new File([wavBlob], `recording.wav`, { type: 'audio/wav' });
+  } finally {
+    await audioContext.close();
+  }
+}
+
 /**
  * Creates a valid synthetic leaf pop WAV file for quick testing / fallback
  */
