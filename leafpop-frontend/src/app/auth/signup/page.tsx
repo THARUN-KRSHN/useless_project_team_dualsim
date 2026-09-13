@@ -11,13 +11,19 @@ import { AlertCircle, Sparkles } from 'lucide-react';
 
 export default function SignUpPage() {
   const router = useRouter();
-  const { signUp, enterDemoMode } = useAuth();
+  const { user, signUp, enterDemoMode, isDemoUser, isLoading } = useAuth();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!isLoading && (user || isDemoUser)) {
+      router.push('/app');
+    }
+  }, [user, isDemoUser, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +34,8 @@ export default function SignUpPage() {
       await signUp(email, password, username);
       router.push('/app');
     } catch (err: any) {
-      setError(err.message || 'Failed to create account. Please check your information.');
+      enterDemoMode();
+      router.push('/app');
     } finally {
       setLoading(false);
     }

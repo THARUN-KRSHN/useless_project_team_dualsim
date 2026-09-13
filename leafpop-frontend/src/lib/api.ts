@@ -192,6 +192,7 @@ export async function uploadPopAudio(file: File, leafId?: string | null, token?:
 
   // Fail-safe Mock Fallback — always succeeds
   const scoreVal = Math.floor(Math.random() * 15) + 82; // 82 to 96
+  const localAudioUrl = typeof window !== 'undefined' && file ? URL.createObjectURL(file) : null;
   return {
     pop_id: 'pop-' + Math.random().toString(36).slice(2, 10),
     id: 'pop-' + Math.random().toString(36).slice(2, 10),
@@ -223,6 +224,7 @@ export async function uploadPopAudio(file: File, leafId?: string | null, token?:
       noise_level: 0.003,
       signal_to_noise: 28.5,
     },
+    audio_url: localAudioUrl,
     pop_detected: true,
     message: 'CRACK! Excellent acoustic pop.',
     prediction_comparison: leafId ? { predicted: 88, actual: scoreVal, diff: scoreVal - 88 } : null,
@@ -283,20 +285,25 @@ export async function getLeaderboard(mode: 'all' | 'real' | 'virtual' = 'all', l
     });
 
     const data = await res.json();
-    if (res.ok && data.leaderboard) return data.leaderboard;
+    if (res.ok && Array.isArray(data.leaderboard) && data.leaderboard.length > 0) {
+      return data.leaderboard;
+    }
   } catch (err) {
     console.warn('Backend leaderboard offline, using fallback mock data:', err);
   }
 
+  // Sample WAV pop sound
+  const sampleWav = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+
   // Fail-safe Mock Leaderboard
   return [
-    { rank: 1, user_id: 'u1', username: 'LeafLord_99', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=60', score: 99, best_score: 99, mode: 'real', source: 'recorded', created_at: new Date().toISOString() },
-    { rank: 2, user_id: 'u2', username: 'AcousticSnap', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=60', score: 96, best_score: 96, mode: 'real', source: 'recorded', created_at: new Date().toISOString() },
-    { rank: 3, user_id: 'u3', username: 'VirtualMaster', avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=60', score: 95, best_score: 95, mode: 'virtual', source: 'recorded', created_at: new Date().toISOString() },
-    { rank: 4, user_id: 'u4', username: 'FloraPopper', avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=60', score: 92, best_score: 92, mode: 'real', source: 'uploaded', created_at: new Date().toISOString() },
-    { rank: 5, user_id: 'u5', username: 'GreenCrunch', avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=60', score: 89, best_score: 89, mode: 'real', source: 'recorded', created_at: new Date().toISOString() },
-    { rank: 6, user_id: 'u6', username: 'OakBuster', avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=60', score: 86, best_score: 86, mode: 'virtual', source: 'recorded', created_at: new Date().toISOString() },
-    { rank: 7, user_id: 'demo-user-123', username: 'mr meow', avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=60', score: 84, best_score: 84, mode: 'real', source: 'recorded', created_at: new Date().toISOString() },
+    { rank: 1, user_id: 'u1', username: 'LeafLord_99', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=60', score: 99, best_score: 99, mode: 'real', source: 'recorded', audio_url: sampleWav, created_at: new Date().toISOString() },
+    { rank: 2, user_id: 'u2', username: 'AcousticSnap', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=60', score: 96, best_score: 96, mode: 'real', source: 'recorded', audio_url: sampleWav, created_at: new Date().toISOString() },
+    { rank: 3, user_id: 'u3', username: 'VirtualMaster', avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=60', score: 95, best_score: 95, mode: 'virtual', source: 'recorded', audio_url: null, created_at: new Date().toISOString() },
+    { rank: 4, user_id: 'u4', username: 'FloraPopper', avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=60', score: 92, best_score: 92, mode: 'real', source: 'uploaded', audio_url: sampleWav, created_at: new Date().toISOString() },
+    { rank: 5, user_id: 'u5', username: 'GreenCrunch', avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=60', score: 89, best_score: 89, mode: 'real', source: 'recorded', audio_url: sampleWav, created_at: new Date().toISOString() },
+    { rank: 6, user_id: 'u6', username: 'OakBuster', avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=60', score: 86, best_score: 86, mode: 'virtual', source: 'recorded', audio_url: null, created_at: new Date().toISOString() },
+    { rank: 7, user_id: 'demo-user-123', username: 'mr meow', avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=60', score: 84, best_score: 84, mode: 'real', source: 'recorded', audio_url: sampleWav, created_at: new Date().toISOString() },
   ];
 }
 

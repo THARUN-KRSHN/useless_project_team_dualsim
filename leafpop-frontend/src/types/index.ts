@@ -70,6 +70,7 @@ export interface PopUploadResponse {
   score?: AudioScoreBreakdown;
   final_score: number;
   audio_features?: AudioPhysicsFeatures;
+  audio_url?: string | null;
   pop_detected?: boolean;
   message: string;
   prediction_comparison?: PredictionComparison | null;

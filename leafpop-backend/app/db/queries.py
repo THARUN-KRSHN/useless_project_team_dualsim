@@ -19,22 +19,132 @@ from app.utils.errors import DatabaseError, StorageError
 
 settings = get_settings()
 
-# In-memory database store for dev fallback
-_MOCK_DB: dict[str, dict[str, dict]] = {
-    TABLE_PROFILES: {},
-    TABLE_LEAVES: {},
-    TABLE_LEAF_ANALYSES: {},
-    TABLE_POP_ATTEMPTS: {},
-    TABLE_VIRTUAL_ATTEMPTS: {},
-}
-
-
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
 def _new_id() -> str:
     return str(uuid.uuid4())
+
+
+def _get_sample_pop_wav_url() -> str:
+    import struct
+    import math
+    import base64
+
+    sample_rate = 22050
+    duration = 0.4
+    num_samples = int(sample_rate * duration)
+    audio_data = bytearray()
+    for i in range(num_samples):
+        t = i / sample_rate
+        decay = math.exp(-t * 25)
+        val = math.sin(2 * math.pi * 1200 * t) * decay * 0.8 + math.sin(2 * math.pi * 180 * t) * decay * 0.5
+        sample = max(-32768, min(32767, int(val * 32767)))
+        audio_data.extend(struct.pack("<h", sample))
+
+    num_channels = 1
+    bits_per_sample = 16
+    byte_rate = sample_rate * num_channels * bits_per_sample // 8
+    block_align = num_channels * bits_per_sample // 8
+    data_size = len(audio_data)
+    chunk_size = 36 + data_size
+
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF", chunk_size, b"WAVE",
+        b"fmt ", 16, 1, num_channels, sample_rate, byte_rate, block_align, bits_per_sample,
+        b"data", data_size
+    )
+    wav_bytes = header + audio_data
+    return "data:audio/wav;base64," + base64.b64encode(wav_bytes).decode("ascii")
+
+
+_SAMPLE_AUDIO_URL = _get_sample_pop_wav_url()
+
+# In-memory database store for dev fallback
+_MOCK_DB: dict[str, dict[str, dict]] = {
+    TABLE_PROFILES: {
+        "user-1": {"id": "user-1", "username": "LeafLord_99", "best_score": 99, "total_pops": 14, "created_at": _now_iso()},
+        "user-2": {"id": "user-2", "username": "AcousticSnap", "best_score": 96, "total_pops": 9, "created_at": _now_iso()},
+        "user-3": {"id": "user-3", "username": "FloraPopper", "best_score": 92, "total_pops": 6, "created_at": _now_iso()},
+        "user-4": {"id": "user-4", "username": "GreenCrunch", "best_score": 89, "total_pops": 11, "created_at": _now_iso()},
+        "demo-user-123": {"id": "demo-user-123", "username": "DemoPopper", "best_score": 85, "total_pops": 3, "created_at": _now_iso()},
+    },
+    TABLE_LEAVES: {},
+    TABLE_LEAF_ANALYSES: {},
+    TABLE_POP_ATTEMPTS: {
+        "pop-seed-1": {
+            "id": "pop-seed-1",
+            "user_id": "user-1",
+            "leaf_id": None,
+            "audio_url": _SAMPLE_AUDIO_URL,
+            "audio_hash": "hash-seed-1",
+            "audio_duration": 0.4,
+            "final_score": 99.0,
+            "loudness_score": 98.0,
+            "sharpness_score": 99.0,
+            "clarity_score": 97.0,
+            "impact_score": 99.0,
+            "source": "recorded",
+            "created_at": _now_iso(),
+        },
+        "pop-seed-2": {
+            "id": "pop-seed-2",
+            "user_id": "user-2",
+            "leaf_id": None,
+            "audio_url": _SAMPLE_AUDIO_URL,
+            "audio_hash": "hash-seed-2",
+            "audio_duration": 0.4,
+            "final_score": 96.0,
+            "loudness_score": 95.0,
+            "sharpness_score": 97.0,
+            "clarity_score": 94.0,
+            "impact_score": 96.0,
+            "source": "recorded",
+            "created_at": _now_iso(),
+        },
+        "pop-seed-3": {
+            "id": "pop-seed-3",
+            "user_id": "user-3",
+            "leaf_id": None,
+            "audio_url": _SAMPLE_AUDIO_URL,
+            "audio_hash": "hash-seed-3",
+            "audio_duration": 0.4,
+            "final_score": 92.0,
+            "loudness_score": 90.0,
+            "sharpness_score": 93.0,
+            "clarity_score": 91.0,
+            "impact_score": 92.0,
+            "source": "uploaded",
+            "created_at": _now_iso(),
+        },
+        "pop-seed-4": {
+            "id": "pop-seed-4",
+            "user_id": "user-4",
+            "leaf_id": None,
+            "audio_url": _SAMPLE_AUDIO_URL,
+            "audio_hash": "hash-seed-4",
+            "audio_duration": 0.4,
+            "final_score": 89.0,
+            "loudness_score": 88.0,
+            "sharpness_score": 90.0,
+            "clarity_score": 87.0,
+            "impact_score": 89.0,
+            "source": "recorded",
+            "created_at": _now_iso(),
+        },
+    },
+    TABLE_VIRTUAL_ATTEMPTS: {
+        "vpop-seed-1": {
+            "id": "vpop-seed-1",
+            "user_id": "user-1",
+            "leaf_type": "oak",
+            "final_score": 95.0,
+            "created_at": _now_iso(),
+        }
+    },
+}
 
 
 def _is_dev() -> bool:
