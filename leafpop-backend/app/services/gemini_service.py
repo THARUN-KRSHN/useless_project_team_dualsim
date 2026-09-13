@@ -6,8 +6,12 @@ import logging
 import os
 from typing import Any, Optional
 
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+except ModuleNotFoundError:  # pragma: no cover - optional dependency on deploy
+    genai = None
+    types = None
 
 from app.config.settings import get_settings
 
@@ -22,8 +26,12 @@ GEMINI_MODELS = [
 ]
 
 
-def get_gemini_client() -> Optional[genai.Client]:
-    """Returns a configured google.genai Client instance if API key is present."""
+def get_gemini_client() -> Optional[Any]:
+    """Returns a configured google.genai Client instance if the SDK and API key are available."""
+    if genai is None or types is None:
+        logger.warning("Gemini SDK not installed; Gemini features are disabled.")
+        return None
+
     settings = get_settings()
     api_key = settings.gemini_api_key or os.environ.get("GEMINI_API_KEY")
     if not api_key:
