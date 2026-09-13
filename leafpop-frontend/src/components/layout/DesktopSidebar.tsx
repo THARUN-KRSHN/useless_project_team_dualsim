@@ -118,7 +118,7 @@ export const DesktopSidebar: React.FC = () => {
           </div>
           <div className="min-w-0 flex-1">
             <span className="font-bold text-sm text-forest block truncate">
-              {user?.username || 'Leaf Popper'}
+              {user?.username || user?.email?.split('@')[0] || 'Leaf Popper'}
             </span>
             <span className="text-xs text-forest-subtle block truncate">
               {isDemoUser ? 'Demo Mode' : user?.email}

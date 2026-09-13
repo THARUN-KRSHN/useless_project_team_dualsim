@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { getLeaderboard } from '@/lib/api';
 import { LeaderboardEntry } from '@/types';
 import { Button } from '../ui/Button';
-import { Trophy, ArrowRight, Medal } from 'lucide-react';
+import { Trophy, ArrowRight, Volume2 } from 'lucide-react';
 
 export const LeaderboardPreview: React.FC = () => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getLeaderboard('all', 3)
+    getLeaderboard('all', 3, 'all')
       .then((data) => setEntries(data))
       .catch(() => setEntries([]))
       .finally(() => setLoading(false));
@@ -48,24 +48,38 @@ export const LeaderboardPreview: React.FC = () => {
             {entries.map((entry, idx) => (
               <div
                 key={entry.user_id ?? `${entry.username}-${idx}`}
-                className="flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-surface-muted/60 hover:bg-surface-accent/60 transition-colors"
+                className="flex flex-col gap-3 p-4 sm:p-5 rounded-2xl bg-surface-muted/60 hover:bg-surface-accent/60 transition-colors sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 min-w-0">
                   <span className="text-2xl">{medals[idx] || `#${idx + 1}`}</span>
-                  <div>
-                    <span className="font-bold text-base text-forest block">
+                  <div className="min-w-0">
+                    <span className="font-bold text-base text-forest block truncate">
                       {entry.username || 'Anonymous Popper'}
                     </span>
                     <span className="text-xs text-forest-subtle capitalize">
-                      {entry.mode || 'real'} pop
+                      {entry.mode || 'real'} pop · {entry.source || 'uploaded'}
                     </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-black text-2xl text-primary-700">
-                    {entry.best_score}
-                  </span>
-                  <span className="text-xs text-forest-subtle block">pts</span>
+
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <div className="text-right">
+                    <span className="font-black text-2xl text-primary-700">
+                      {entry.best_score}
+                    </span>
+                    <span className="text-xs text-forest-subtle block">pts</span>
+                  </div>
+
+                  {entry.audio_url ? (
+                    <div className="flex items-center gap-2 rounded-full bg-white px-2.5 py-1.5 border border-border shadow-sm">
+                      <Volume2 size={14} className="text-primary-600" />
+                      <audio controls src={entry.audio_url} className="h-8 w-28 sm:w-32" />
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-forest-subtle bg-white border border-border rounded-full px-2 py-1">
+                      No audio
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

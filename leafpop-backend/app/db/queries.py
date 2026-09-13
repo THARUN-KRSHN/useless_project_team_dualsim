@@ -76,7 +76,7 @@ def upload_to_storage(bucket: str, path: str, content: bytes, content_type: str)
 
 def _normalize_username(username: str | None, user_id: str | None = None) -> str:
     candidate = (username or "").strip()
-    if candidate and not candidate.lower().startswith("leafpopper-"):
+    if candidate:
         return candidate
     if user_id and user_id.lower() == "demo-user-123":
         return "DemoPopper"
@@ -585,19 +585,20 @@ def get_username(user_id: str) -> str:
     if user_id == "demo-user-123":
         return "DemoPopper"
     if _is_dev() and user_id in _MOCK_DB[TABLE_PROFILES]:
-        return _MOCK_DB[TABLE_PROFILES][user_id].get("username", "Leaf Popper")
+        username = _MOCK_DB[TABLE_PROFILES][user_id].get("username")
+        return username or "Leaf Popper"
 
     try:
         client = get_supabase()
         result = client.table(TABLE_PROFILES).select("username").eq("id", user_id).limit(1).execute()
         if result.data:
             username = result.data[0].get("username")
-            if username and not username.lower().startswith("leafpopper-"):
+            if username:
                 return username
             return "Leaf Popper"
         found = _MOCK_DB[TABLE_PROFILES].get(user_id, {})
         username = found.get("username")
-        if username and not username.lower().startswith("leafpopper-"):
+        if username:
             return username
         return "Leaf Popper"
     except Exception:  # noqa: BLE001

@@ -102,7 +102,7 @@ export default function ProfilePage() {
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h2 className="text-2xl font-black text-forest">
-                  {user?.username || 'Leaf Popper'}
+                  {user?.username || user?.email?.split('@')[0] || 'Leaf Popper'}
                 </h2>
                 {stats?.rank && (
                   <Pill variant="green" size="sm" icon={<Trophy size={11} />}>

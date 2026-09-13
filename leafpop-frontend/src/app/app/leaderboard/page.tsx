@@ -45,9 +45,7 @@ function getScoreGradient(score: number) {
 
 function formatDisplayName(username?: string | null) {
   if (!username || !username.trim()) return 'Leaf Popper';
-  const cleaned = username.trim();
-  if (/^LeafPopper-[a-f0-9-]+$/i.test(cleaned)) return 'Leaf Popper';
-  return cleaned;
+  return username.trim();
 }
 
 export default function LeaderboardPage() {
@@ -63,7 +61,7 @@ export default function LeaderboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getLeaderboard(m, 25, s);
+      const data = await getLeaderboard(m, 100, s);
       setEntries(data);
       setLastUpdated(new Date());
     } catch (err: any) {

@@ -32,21 +32,20 @@ async def get_current_user(authorization: str | None = Header(default=None)) -> 
     if not token:
         raise UnauthorizedError("Missing bearer token.")
 
-    if not settings.is_supabase_configured or token in ("demo-token", "dev-test-token", "mock-token"):
-        return CurrentUser(id="demo-user-123", email="demo@leafpop.ai", username="DemoPopper")
+    if not settings.is_supabase_configured:
+        raise UnauthorizedError("Supabase is not configured. Set SUPABASE_URL and SUPABASE_KEY/SUPABASE_SERVICE_KEY before using authenticated routes.")
+
+    if token in ("demo-token", "dev-test-token", "mock-token"):
+        raise UnauthorizedError("Demo tokens are disabled for real auth. Please sign in with a valid Supabase account.")
 
     client = get_supabase()
     try:
         response = client.auth.get_user(token)
     except Exception as exc:  # noqa: BLE001 - supabase-py raises varied auth errors
-        if settings.environment == "development":
-            return CurrentUser(id="demo-user-123", email="demo@leafpop.ai", username="DemoPopper")
         raise UnauthorizedError(f"Invalid or expired token: {exc}") from exc
 
     user = getattr(response, "user", None)
     if not user:
-        if settings.environment == "development":
-            return CurrentUser(id="demo-user-123", email="demo@leafpop.ai", username="DemoPopper")
         raise UnauthorizedError("Invalid or expired token.")
 
     username = None

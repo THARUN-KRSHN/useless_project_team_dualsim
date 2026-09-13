@@ -45,15 +45,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isDemoUser, setIsDemoUser] = useState(false);
 
   useEffect(() => {
-    // Check local storage for existing session or demo flag
+    // Check local storage for an explicitly chosen demo session.
     const savedToken = localStorage.getItem('leafpop_token');
     const savedDemo = localStorage.getItem('leafpop_demo_mode');
 
-    if (savedDemo === 'true' || (!isSupabaseConfigured && !savedToken)) {
+    if (savedDemo === 'true') {
       setUser(DEMO_USER);
       setToken('demo-token');
       setIsDemoUser(true);
       setSessionCookie();
+      setIsLoading(false);
+      return;
+    }
+
+    if (!isSupabaseConfigured && !savedToken) {
+      setUser(null);
+      setToken(null);
+      setIsDemoUser(false);
       setIsLoading(false);
       return;
     }
@@ -67,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
-            username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'LeafPopper',
+            username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Leaf Popper',
           });
           setIsDemoUser(false);
         } else if (savedToken === 'demo-token') {
@@ -88,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
-            username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'LeafPopper',
+            username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Leaf Popper',
           });
           setIsDemoUser(false);
         } else {
@@ -125,8 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, pass: string) => {
     if (!isSupabaseConfigured || !supabase) {
-      enterDemoMode();
-      return;
+      throw new Error('Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your frontend .env file.');
     }
 
     try {
@@ -148,27 +155,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         setIsDemoUser(false);
       }
-    } catch (_) {
-      // Fallback to Demo Mode on any auth error so user is never blocked
-      const userHandle = email.split('@')[0] || 'LeafPopper';
-      setUser({
-        id: 'demo-user-123',
-        email: email || 'demo@leafpop.ai',
-        username: userHandle,
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=60',
-      });
-      setToken('demo-token');
-      setIsDemoUser(true);
-      setSessionCookie();
-      localStorage.setItem('leafpop_demo_mode', 'true');
-      localStorage.setItem('leafpop_token', 'demo-token');
+    } catch (err: any) {
+      console.error('Supabase sign-in error:', err);
+      throw new Error(err?.message || 'Sign in failed. Please check your Supabase auth settings and credentials.');
     }
   };
 
   const signUp = async (email: string, pass: string, username: string) => {
     if (!isSupabaseConfigured || !supabase) {
-      enterDemoMode();
-      return;
+      throw new Error('Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your frontend .env file.');
     }
 
     try {
@@ -191,23 +186,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           username,
         });
         setIsDemoUser(false);
-      } else {
-        // Fallback for signups requiring email confirmation
-        enterDemoMode();
+      } else if (!data.session) {
+        throw new Error('Supabase signup succeeded but no session was returned. Check your email confirmation settings in Supabase Auth.');
       }
-    } catch (_) {
-      // Fallback to Demo Mode on any signup error
-      setUser({
-        id: 'demo-user-123',
-        email: email || 'demo@leafpop.ai',
-        username: username || 'LeafPopper',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=60',
-      });
-      setToken('demo-token');
-      setIsDemoUser(true);
-      setSessionCookie();
-      localStorage.setItem('leafpop_demo_mode', 'true');
-      localStorage.setItem('leafpop_token', 'demo-token');
+    } catch (err: any) {
+      console.error('Supabase sign-up error:', err);
+      throw new Error(err?.message || 'Sign up failed. Please check your Supabase auth setup and account details.');
     }
   };
 
